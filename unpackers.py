@@ -48,6 +48,17 @@ def add_max_field_padding(values, num_required_cols):
     return padded_values
 
 
+def flatten_series_to_columns(value, field_name):
+    if pd.api.types.is_list_like(value):
+        new_index = []
+        for i in range(0, len(value)):
+            new_index.append(f"{field_name}:{i}")
+        new_series = pd.Series(value, index=new_index, dtype=object)
+    else:
+        new_series = pd.Series(value, index=[field_name], dtype=object)
+
+    return new_series 
+
 def unpack_youtrack_issue(issue):
     new_issue = {
         # basic fields that apply to all issues regardless of project
