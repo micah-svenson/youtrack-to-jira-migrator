@@ -1,0 +1,8 @@
+*.json
+data/
+.jiratoken
+.youtracktoken
+requirements/
+misc/
+env/
+**/__pycache__

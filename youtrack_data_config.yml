@@ -1,0 +1,114 @@
+# Convert YouTrack Issues into Jira Issues
+# Pulls YouTrack Issue data in JSON format either from a local file or from the YouTrack API
+# Converts Issues to Jira Format and applies user defined custom processing functions if additional modifications are necessary.
+# Jira Issues are compatible with the System Admin version of their CSV import tool in Jira Cloud.
+# Use:
+#     Configure settings in this file. Each configuration has inline documentation. 
+#     For additional modifications to fields, add functions to custom_field_processing_functions.py
+# 
+# Author: Micah Svenson
+# Date Created: 4/25/22 
+#
+
+# The short name of the project you want to export from YouTrack. This must be an exact match to the YouTrack project name
+project_name: "EXAMPLE"
+# The API url for the Youtrack instance
+api_url: "https://example.myjetbrains.com/youtrack/api/"
+# Flag to override preference for loading local data
+prefer_api: False
+# Flag to save attachments for all issues and comments on project
+save_attachments: True
+# Issue Id number to start importing from with the given project.
+start_issue: 1
+# Number of issues to retrieve starting from start_issue. A value of -1 means all issues will be retrieved.
+num_issues_to_retrieve: -1
+# path of youtrack api token
+youtrack_token_path: "./.youtracktoken"
+# directory path for loading and saving data
+data_storage_path: "./data/"
+# fields to retrieve from each YouTrack issue
+# Note: It is strongly advised to only add new values to this list. Removing values may break the tool
+issue_fields: >-
+  id,
+  idReadable,
+  summary,
+  description,
+  created,
+  updated,
+  reporter(
+    fullName,
+    email,
+    banned
+  ),
+  updater(
+    fullName,
+    email,
+    banned
+  ),
+  resolved,
+  comments(
+    text,
+    author(
+      fullName,
+      email,
+      banned
+    ),
+    created
+  ),
+  tags(
+    name
+  ),
+  links(
+    direction,
+    linkType(
+      directed,
+      name,
+      sourceToTarget,
+      targetToSource
+    ),
+    issues(
+      id,
+      idReadable
+    )
+  ),
+  customFields(
+    name,
+    value(
+      name,
+      text,
+      minutes,
+      email,
+      banned
+    )
+  )
+
+# Note: It is strongly advised to only add new values to this list. Removing values may break the tool
+work_item_fields: >-
+  id,
+  author(
+    fullName,
+    email,
+    banned
+  ),
+  creator(
+    fullName,
+    email,
+    banned
+  ),
+  text,
+  type(
+    name
+  ),
+  created,
+  updated,
+  duration(
+    minutes
+  ),
+  date,
+  issue(
+    idReadable
+  ),
+  attributes(
+    name,
+    value
+  )
