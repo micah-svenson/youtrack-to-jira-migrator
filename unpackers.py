@@ -86,6 +86,7 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     return new_issue
 
 def unpack_worklogs(logs):
+#TODO: getting a syntax error on import here
     return [
         f'{log["creator"]["fullName"]}-{log["type"]["name"] if "name" in log["type"] else "No Worktype"}: {log["text"]};{timestamp_to_datetime(log["date"])};{log["creator"]["email"] if log["creator"]["banned"] is False else ""};{log["duration"]["minutes"]*60}'
         for log in logs

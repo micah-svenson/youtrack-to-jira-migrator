@@ -53,6 +53,7 @@ print(f"Requesting {num_issues_to_retrieve} issues from YouTrack starting with I
 all_issues = requests.get(api_url+"admin/projects/"+project_id+"/issues", params=issues_list_fields, headers=auth_header).json()
 
 worklog_fields = {"fields": "id,author(fullName,email,banned),creator(fullName,email,banned),text,type(name),created,updated,duration(minutes),date,issue(idReadable),attributes(name,value)"}
+# TODO: this is really expensive. one api call per issue is slowing everything down
 for issue in all_issues:
     issue["workItems"] = requests.get(api_url+"issues/"+issue["id"]+"/timeTracking/workItems", headers=auth_header, params=worklog_fields).json()
 
