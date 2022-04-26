@@ -6,9 +6,21 @@ Date Created: 4/25/22
 import os
 import datetime
 import pandas as pd
-from typing import Tuple, Any
+from typing import Tuple, Any, Dict
 
-def flatten_series_to_columns(value, field_name):
+def flatten_series_to_columns(value: Any, field_name: str) -> pd.Series:
+    """flattens a series/list to columns with mangled names
+    Name mangling in this context means adding a :int to the end of a column name that can be stripped off later.
+    i.e. Assignee:0, Assignee:1, etc
+
+
+    Args:
+        value (Any): Any pandas data frame value. Only list like values will get new columns
+        field_name (str): the name of the column 
+
+    Returns:
+        pd.Series: an name indexed pandas series 
+    """
     index_range = 1
 
     if pd.api.types.is_list_like(value):
@@ -21,7 +33,17 @@ def flatten_series_to_columns(value, field_name):
 
     return pd.Series(value, index=new_index, dtype=object)
 
-def unpack_youtrack_issue(issue):
+def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
+    """Unpack youtrack issue api response into a simpler JSON
+
+    This function also applies the custom field processing functions defined in custom_field_processing_functions.py
+
+    Args:
+        issue (Dict[str, Any]): A YouTrack issue response
+
+    Returns:
+        Dict[str, Any]: A simplified issue JSON
+    """
     print("\n", issue["idReadable"])
     new_issue = {
         # basic fields that apply to all issues regardless of project
@@ -42,7 +64,6 @@ def unpack_youtrack_issue(issue):
         new_issue[field_name] = field_values
 
     # unpack links
-    # NOTE: subtasks and parents are already included in the links key
     for link_group in issue["links"]:
         link_name, link_values = unpack_link_group(link_group)
         new_issue[link_name] = link_values
@@ -77,23 +98,6 @@ def unpack_youtrack_issue(issue):
             else:
                 new_issue[new_key_name] = new_value
                 print(new_key_name, new_issue[new_key_name])
-
-    import json
-    with open(f'./data/test{new_issue["Issue Id"]}.json', 'w') as f:
-        json.dump(new_issue, f)
-    # # (ATAT only) create a comment containing Task Deliverable Links Content
-    # if "Task Deliverable Links" in issue:
-    #     new_issue["Comments"].append(f"Task Deliverable Links:\n{issue['Task Deliverable Links']}")
-
-    # # (ATAT only) overflow multiple assignees into swarmers custom field
-    # if "Assignees" in new_issue and \
-    #     new_issue["Assignees"] != None and \
-    #         isinstance(new_issue["Assignees"], list) and \
-    #         len(new_issue["Assignees"]) > 1:
-    #     # assign all but the first assignee to swarmers field
-    #     new_issue["Swarmers"] = new_issue["Assignees"][1:-1]
-    #     # keep only the first assignee in the assignees field
-    #     new_issue["Assignees"] = new_issue["Assignees"][0]
 
     return new_issue
 
