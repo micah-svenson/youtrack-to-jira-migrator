@@ -50,14 +50,32 @@ Date Created: 4/25/22
 """
 from typing import Any, Tuple
 
-def Task_Deliverable_Links(value):
+def Task_Deliverable_Links(value, _):
     # Make Task Deliverabe Links field a comment in jira
     return ("Comments", f"Task Deliverable Links: {value}") if value != None else ("Comments", None)
 
-def Assignees(value):
+def Assignees(value, _):
     if value != None and isinstance(value, list) and len(value) > 1:
         # Overflow multiple assignees into swarmers
         return (["Assignees", "Swarmers"], [value[0], value[1:]])
     else:
         # Resassign the original data if only one assignee
         return ("Assignees", value)
+
+def Type(value, get_issue_value):
+    if "Feature" in value:
+        # YouTrack features need to be Jira Epics
+        return ("Epic Link", get_issue_value("Summary"))
+    elif "Epic" in value:
+        # YouTrack epics are components in Jira
+        return ("Component", get_issue_value("Summary"))
+    else:
+        # Dont do anything for other task types
+        return ("Type", value)
+
+def Sprints(value, _):
+    # Jira only takes numbers for sprint ids
+    # assign Backlog None
+    if not isinstance(value, list):
+        value = [value]
+    return ("Sprints", [[sprint.split(" ")[-1] if "Backlog" not in sprint else None for sprint in value]])

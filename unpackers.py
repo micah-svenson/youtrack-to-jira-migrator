@@ -57,8 +57,8 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
         "Reported": timestamp_to_datetime(issue["created"]),
         "Updated": timestamp_to_datetime(issue["updated"]),
 
-        "Reporter": issue["reporter"]["email"], 
-        "Updater": issue["updater"]["email"] 
+        "Reporter": issue["reporter"]["email"] if issue["reporter"]["banned"] is True else None, 
+        "Updater": issue["updater"]["email"] if issue["reporter"]["banned"] is True else None,
     }
 
     # unpack custom fields
@@ -77,10 +77,19 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     # unpack comments
     new_issue["Comments"] = unpack_comments(issue["comments"])
 
+    # unpack worklogs
+    new_issue["Worklogs"] = unpack_worklogs(issue["workItems"])
+
     # Apply an custom field processing functions
     new_issue = apply_custom_field_processors(new_issue)
 
     return new_issue
+
+def unpack_worklogs(logs):
+    return [
+        f'{log["creator"]["fullName"]}-{log["type"]["name"] if "name" in log["type"] else "No Worktype"}: {log["text"]};{timestamp_to_datetime(log["date"])};{log["creator"]["email"] if log["creator"]["banned"] is False else ""};{log["duration"]["minutes"]*60}'
+        for log in logs
+    ]
 
 
 def apply_custom_field_processors(issue: Dict[str, Any]) -> Dict[str, Any]:
@@ -110,9 +119,14 @@ def apply_custom_field_processors(issue: Dict[str, Any]) -> Dict[str, Any]:
 
     funcs_to_apply = filter(key_filter, dir(custom_field_processing_functions))
 
+    import functools
+    def get_value(key, map={}):
+        return map[key]
+    get_issue_value = functools.partial(get_value, map=issue)
+
     for func_name in funcs_to_apply:
         key_name = func_name.replace('__', '_').replace('_', ' ')
-        new_key_names, new_values = getattr(custom_field_processing_functions, func_name)(issue[key_name])
+        new_key_names, new_values = getattr(custom_field_processing_functions, func_name)(issue[key_name], get_issue_value)
         new_key_names = [new_key_names] if not isinstance(new_key_names, list) else new_key_names
         new_values = [new_values] if not isinstance(new_values, list) else new_values
 
@@ -184,7 +198,7 @@ def unpack_field_value(field: dict) -> Tuple[str, Any]:
 
     elif field['$type'] == 'MultiUserIssueCustomField':
         field_name = field['name']
-        new_values = [item['email'] for item in field['value']]
+        new_values = [item['email'] for item in field['value'] if item['banned'] is False]
 
     elif field['$type'] == 'MultiVersionIssueCustomField':
         field_name = field['name']
