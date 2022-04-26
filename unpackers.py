@@ -9,15 +9,15 @@ import pandas as pd
 from typing import Tuple, Any
 
 def flatten_series_to_columns(value, field_name):
+    index_range = 1
+
     if pd.api.types.is_list_like(value):
         if len(value) == 0:
-            new_index = [field_name]
             value = [None]
-        else:
-            # mangle duplicate column names so pandas doesnt get mad
-            new_index = [f"{field_name}:{i}" for i in range(0, len(value))]
-    else:
-        new_index = [f"{field_name}:0"]
+        index_range = len(value)
+
+    # Mangle names of every column even if there is only one value for consistency
+    new_index = [f"{field_name}:{i}" for i in range(0, index_range)]
 
     return pd.Series(value, index=new_index, dtype=object)
 
