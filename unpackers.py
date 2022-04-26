@@ -1,65 +1,28 @@
+""" Helper functions for the youtrack_to_jira.py export script.
+
+Author: Micah Svenson
+Date Created: 4/25/22 
+"""
+import os
 import datetime
 import pandas as pd
-
-
-def create_csv_header(all_issues):
-    max_field_counts = {}
-    # iterate through full list of issues and find the longest array for each field. This will define the number of duplicate columns needed for the header
-    for issue_json in all_issues:
-        for field in issue_json:
-            if field not in max_field_counts:
-                max_field_counts[field] = 0
-            if isinstance(issue_json[field], list):
-                if len(issue_json[field]) > max_field_counts[field]:
-                    max_field_counts[field] = len(issue_json[field])
-            else:
-                max_field_counts[field] = 1
-
-    # generate header using max field counts
-    # Note: order preservation means header will align with rows later on.
-    header = []
-    for max_field in max_field_counts.items():
-        field_name, max_count = max_field
-        header += [field_name] * max_count
-
-    return (header, max_field_counts)
-
-
-def unpacked_issue_to_csv(issue_json, max_field_counts):
-    # build csv row 
-    row = []
-    for field in issue_json:
-        addi = add_max_field_padding(issue_json[field], max_field_counts[field])
-        print(addi)
-        row += addi # add_max_field_padding(issue_json[field], max_field_counts[field])
-    return row
-
-
-def add_max_field_padding(values, num_required_cols):
-    padded_values = []
-    if isinstance(values, list): 
-        # add None values to pad to required number of columns
-        num_none_values = num_required_cols - len(values)
-        if num_none_values > 0:
-            padded_values += [None] * num_none_values
-    else:
-        padded_values = [values]
-    
-    return padded_values
-
+from typing import Tuple, Any
 
 def flatten_series_to_columns(value, field_name):
     if pd.api.types.is_list_like(value):
-        new_index = []
-        for i in range(0, len(value)):
-            new_index.append(f"{field_name}:{i}")
-        new_series = pd.Series(value, index=new_index, dtype=object)
+        if len(value) == 0:
+            new_index = [field_name]
+            value = [None]
+        else:
+            # mangle duplicate column names so pandas doesnt get mad
+            new_index = [f"{field_name}:{i}" for i in range(0, len(value))]
     else:
-        new_series = pd.Series(value, index=[field_name], dtype=object)
+        new_index = [f"{field_name}:0"]
 
-    return new_series 
+    return pd.Series(value, index=new_index, dtype=object)
 
 def unpack_youtrack_issue(issue):
+    print("\n", issue["idReadable"])
     new_issue = {
         # basic fields that apply to all issues regardless of project
         "Issue Id": issue["idReadable"],
@@ -69,8 +32,8 @@ def unpack_youtrack_issue(issue):
         "Reported": timestamp_to_datetime(issue["created"]),
         "Updated": timestamp_to_datetime(issue["updated"]),
 
-        "Reporter": issue["reporter"]["email"], #if issue["reporter"]["banned"] == False else None,
-        "Updater": issue["updater"]["email"] #if issue["reporter"]["banned"] == False else None,
+        "Reporter": issue["reporter"]["email"], 
+        "Updater": issue["updater"]["email"] 
     }
 
     # unpack custom fields
@@ -90,24 +53,63 @@ def unpack_youtrack_issue(issue):
     # unpack comments
     new_issue["Comments"] = unpack_comments(issue["comments"])
 
-    # (ATAT only) create a comment containing Task Deliverable Links Content
-    if "Task Deliverable Links" in issue:
-        new_issue["Comments"].append(f"Task Deliverable Links:\n{issue['Task Deliverable Links']}")
+    # Run additional custom field processing 
+    if os.path.exists('./custom_field_processing_functions.py'):
+        import custom_field_processing_functions
+    for custom_function_name in dir(custom_field_processing_functions):
+        unmangled_name = custom_function_name.replace('__', '_').replace('_', ' ')
+        if unmangled_name in new_issue:
+            new_key_name, new_value = getattr(custom_field_processing_functions, custom_function_name)(new_issue[unmangled_name])
+            # delete source data so that the next step can cleanly combine new data going into other pre-existing columns
+            del new_issue[unmangled_name]
+            if isinstance(new_key_name, list):
+                for index, key in enumerate(new_key_name):
+                    if key in new_issue:
+                        current_value = new_issue[key]
+                        if not isinstance(current_value, list):
+                            current_value = [current_value]
+                        if not isinstance(new_value, list):
+                            new_value = [new_value]
+                        new_issue[key] = current_value + new_value
+                    else:
+                        new_issue[key] = new_value[index]
+                    print(key, new_issue[key])
+            else:
+                new_issue[new_key_name] = new_value
+                print(new_key_name, new_issue[new_key_name])
 
-    # (ATAT only) overflow multiple assignees into swarmers custom field
-    if "Assignees" in new_issue and \
-        new_issue["Assignees"] != None and \
-            isinstance(new_issue["Assignees"], list) and \
-            len(new_issue["Assignees"]) > 1:
-        # assign all but the first assignee to swarmers field
-        new_issue["Swarmers"] = new_issue["Assignees"][1:-1]
-        # keep only the first assignee in the assignees field
-        new_issue["Assignees"] = new_issue["Assignees"][0]
+    import json
+    with open(f'./data/test{new_issue["Issue Id"]}.json', 'w') as f:
+        json.dump(new_issue, f)
+    # # (ATAT only) create a comment containing Task Deliverable Links Content
+    # if "Task Deliverable Links" in issue:
+    #     new_issue["Comments"].append(f"Task Deliverable Links:\n{issue['Task Deliverable Links']}")
+
+    # # (ATAT only) overflow multiple assignees into swarmers custom field
+    # if "Assignees" in new_issue and \
+    #     new_issue["Assignees"] != None and \
+    #         isinstance(new_issue["Assignees"], list) and \
+    #         len(new_issue["Assignees"]) > 1:
+    #     # assign all but the first assignee to swarmers field
+    #     new_issue["Swarmers"] = new_issue["Assignees"][1:-1]
+    #     # keep only the first assignee in the assignees field
+    #     new_issue["Assignees"] = new_issue["Assignees"][0]
 
     return new_issue
 
 
-def unpack_field_value(field):
+def unpack_field_value(field: dict) -> Tuple[str, Any]:
+    """Unpack YouTrack field values based on YouTrack type
+
+    Args:
+        field (dict): the field to unpack
+
+    Raises:
+        NotImplementedError: thrown if an unknown youtrack type is encountered
+
+    Returns:
+        Tuple[str, Any]: first value is name of field, second value is the values or values stored within the field.
+    """
     field_name = ""
     new_values = []
 
@@ -145,25 +147,18 @@ def unpack_field_value(field):
 
     elif field['$type'] == 'MultiEnumIssueCustomField':
         field_name = field['name']
-        for item in field['value']:
-            new_values.append(item['name'])
+        new_values = [item['name'] for item in field['value']]
 
     elif field['$type'] == 'MultiUserIssueCustomField':
         field_name = field['name']
-        for item in field['value']:
-            # repeat the name field name for each value entry.
-            # if item["banned"] == False:
-            new_values.append(item['email'])
+        new_values = [item['email'] for item in field['value']]
 
     elif field['$type'] == 'MultiVersionIssueCustomField':
         field_name = field['name']
-        for item in field['value']:
-            # repeat the name field name for each value entry.
-            new_values.append(item['name'])
+        new_values = [item['name'] for item in field['value']]
 
     else:
         raise NotImplementedError(f'Dont know how to handle {field["$type"]}')
-
 
     if len(new_values) == 1:
         new_values = new_values[0]
@@ -172,22 +167,54 @@ def unpack_field_value(field):
 
     return (field_name, new_values)
 
-def unpack_link_group(link_group):
+def unpack_link_group(link_group: dict) -> Tuple[str, list]:
+    """Unpack a link group name and list of associated issue id's
+    Finds the proper direction of the current link type and pairs a list of issue ids in a tuple.
+
+    Args:
+        link_group (dict): a youtrack link group response object
+
+    Returns:
+        Tuple[str, list]: first value is link type, second value is list of issue ids associated with current issue via link type 
+    """
     return (
         link_group["linkType"]["targetToSource"] if link_group["direction"] == "INWARD" else link_group["linkType"]["sourceToTarget"],
         [linked_issue["idReadable"] for linked_issue in link_group["issues"]]
     )
 
-def unpack_comments(comments):
-    # jira import format is : date;author;comment
+def unpack_comments(comments: list) -> list:
+    """Unpack youtrack issue comments into a jira compatible formate
+
+    jira comment import format is: date;author;comment
+
+    Args:
+        comments (list): A list of comments in youtrack response format
+
+    Returns:
+        list : a list of comments in jira import format
+    """
     return [f'{timestamp_to_datetime(comment["created"])};{comment["author"]["email"]};{comment["text"]}' for comment in comments] 
 
 
-def timestamp_to_datetime(timestamp):
-    """Convert timestamps to string formatted dates"""
+def timestamp_to_datetime(timestamp: int) -> str:
+    """convert timestamps to string formatted dates
+
+    Args:
+        timestamp (int): a unix time stamp in milliseconds
+
+    Returns:
+        str : a formatted datetime string
+    """
     return datetime.datetime.fromtimestamp(int(timestamp/1000)).strftime('%Y-%m-%d %H:%M:%S')
 
 
-def unpack_tags(tags):
-    """Unpack tags a list"""
+def unpack_tags(tags: list) -> list:
+    """unpack tags into a list of tag names
+
+    Args:
+        tags (dict): YouTrack tags result
+
+    Returns:
+        list : a list of tag names
+    """
     return [tag['name'] for tag in tags]

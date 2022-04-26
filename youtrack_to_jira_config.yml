@@ -1,0 +1,66 @@
+# Use this file to configure which project should be exported from YouTrack
+
+# The name of the project you want to export from YouTrack
+project_name: "ATAT"
+# The API url for the Youtrack instance
+api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
+# Issue Id number to start importing from
+start_issue: 599
+# Number of issues to retrieve starting from start_issue
+num_issues_to_retrieve: 10
+# path of youtrack api token
+youtrack_token_path: "./.youtracktoken"
+# path to csv output director
+csv_output_path: "./data/"
+# fields to retreive from each YouTrack issue
+fields: >-
+  idReadable,
+  summary,
+  description,
+  created,
+  updated,
+  reporter(
+    fullName,
+    email,
+    banned
+  ),
+  updater(
+    fullName,
+    email,
+    banned
+  ),
+  resolved,
+  numberInProject,
+  comments(
+    text,
+    author(
+      email
+    ),
+    created
+  ),
+  tags(
+    name
+  ),
+  links(
+    direction,
+    linkType(
+      directed,
+      name,
+      sourceToTarget,
+      targetToSource
+    ),
+    issues(
+      id,
+      idReadable
+    )
+  ),
+  customFields(
+    name,
+    value(
+      name,
+      text,
+      minutes,
+      email,
+      banned
+    )
+  )
