@@ -3,10 +3,12 @@
 Author: Micah Svenson
 Date Created: 4/25/22 
 """
+
 import os
 import datetime
 import pandas as pd
 from typing import Tuple, Any, Dict
+
 
 def flatten_series_to_columns(value: Any, field_name: str) -> pd.Series:
     """flattens a series/list to columns with mangled names
@@ -33,6 +35,7 @@ def flatten_series_to_columns(value: Any, field_name: str) -> pd.Series:
 
     return pd.Series(value, index=new_index, dtype=object)
 
+
 def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     """Unpack youtrack issue api response into a simpler JSON
 
@@ -44,7 +47,7 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: A simplified issue JSON
     """
-    print("\n", issue["idReadable"])
+
     new_issue = {
         # basic fields that apply to all issues regardless of project
         "Issue Id": issue["idReadable"],
@@ -74,32 +77,58 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     # unpack comments
     new_issue["Comments"] = unpack_comments(issue["comments"])
 
-    # Run additional custom field processing 
-    if os.path.exists('./custom_field_processing_functions.py'):
-        import custom_field_processing_functions
-    for custom_function_name in dir(custom_field_processing_functions):
-        unmangled_name = custom_function_name.replace('__', '_').replace('_', ' ')
-        if unmangled_name in new_issue:
-            new_key_name, new_value = getattr(custom_field_processing_functions, custom_function_name)(new_issue[unmangled_name])
-            # delete source data so that the next step can cleanly combine new data going into other pre-existing columns
-            del new_issue[unmangled_name]
-            if isinstance(new_key_name, list):
-                for index, key in enumerate(new_key_name):
-                    if key in new_issue:
-                        current_value = new_issue[key]
-                        if not isinstance(current_value, list):
-                            current_value = [current_value]
-                        if not isinstance(new_value, list):
-                            new_value = [new_value]
-                        new_issue[key] = current_value + new_value
-                    else:
-                        new_issue[key] = new_value[index]
-                    print(key, new_issue[key])
-            else:
-                new_issue[new_key_name] = new_value
-                print(new_key_name, new_issue[new_key_name])
+    # Apply an custom field processing functions
+    new_issue = apply_custom_field_processors(new_issue)
 
     return new_issue
+
+
+def apply_custom_field_processors(issue: Dict[str, Any]) -> Dict[str, Any]:
+    """apply custom field processing function defined in custom_field_processing_functions.py
+
+    Args:
+        issue (Dict[str, Any]): The issue to apply processing functions to
+
+    Raises:
+        Exception: when number of keys and values returned by a custom function are not equal
+
+    Returns:
+        Dict[str, Any]: The updated issue
+    """
+
+    # only apply custom field processors if they exist
+    # TODO: move this import to a higher level so it only gets called once
+    if os.path.exists('./custom_field_processing_functions.py'):
+        import custom_field_processing_functions
+    else:
+        return issue
+
+    def key_filter(key: str) -> bool:
+        """filter out custom functions and objects that don't apply to the current issue"""
+        unmangled_key = key.replace('__', '_').replace('_', ' ')
+        return unmangled_key in issue
+
+    funcs_to_apply = filter(key_filter, dir(custom_field_processing_functions))
+
+    for func_name in funcs_to_apply:
+        key_name = func_name.replace('__', '_').replace('_', ' ')
+        new_key_names, new_values = getattr(custom_field_processing_functions, func_name)(issue[key_name])
+        new_key_names = [new_key_names] if not isinstance(new_key_names, list) else new_key_names
+        new_values = [new_values] if not isinstance(new_values, list) else new_values
+
+        if len(new_key_names) != len(new_values):
+            raise Exception(f"Custom field processing functions must return an equal number of keys and values. {func_name} returned {len(new_key_names)} key names and {len(new_values)} values")
+
+        # delete source data so that the next step can cleanly combine new data going into other pre-existing columns
+        del issue[key_name]
+
+        for index, key in enumerate(new_key_names):
+            # if data is being added to a different existing column, preserve the original data while adding new data.
+            current_value = issue[key] if key in issue else []
+            current_value = [current_value] if not isinstance(current_value, list) else current_value
+            new_value = new_values[index] if isinstance(new_values[index], list) else [new_values[index]]
+            issue[key] = current_value + new_value
+    return issue
 
 
 def unpack_field_value(field: dict) -> Tuple[str, Any]:
@@ -171,6 +200,7 @@ def unpack_field_value(field: dict) -> Tuple[str, Any]:
 
     return (field_name, new_values)
 
+
 def unpack_link_group(link_group: dict) -> Tuple[str, list]:
     """Unpack a link group name and list of associated issue id's
     Finds the proper direction of the current link type and pairs a list of issue ids in a tuple.
@@ -185,6 +215,7 @@ def unpack_link_group(link_group: dict) -> Tuple[str, list]:
         link_group["linkType"]["targetToSource"] if link_group["direction"] == "INWARD" else link_group["linkType"]["sourceToTarget"],
         [linked_issue["idReadable"] for linked_issue in link_group["issues"]]
     )
+
 
 def unpack_comments(comments: list) -> list:
     """Unpack youtrack issue comments into a jira compatible formate
