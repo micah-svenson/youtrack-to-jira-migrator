@@ -52,7 +52,7 @@ from typing import Any, Tuple
 
 def Task_Deliverable_Links(value, _):
     # Make Task Deliverabe Links field a comment in jira
-    return ("Comments", f"Task Deliverable Links: {value}") if value != None else ("Comments", None)
+    return ("Comments", f";;Task Deliverable Links: {value}") if value != None else ("Comments", None)
 
 def Assignees(value, _):
     if value != None and isinstance(value, list) and len(value) > 1:
@@ -65,7 +65,7 @@ def Assignees(value, _):
 def Type(value, get_issue_value):
     if "Feature" in value:
         # YouTrack features need to be Jira Epics
-        return ("Epic Link", get_issue_value("Summary"))
+        return (["Type", "Epic Name"], ["Epic", get_issue_value("Summary")])
     elif "Epic" in value:
         # YouTrack epics are components in Jira
         return ("Component", get_issue_value("Summary"))

@@ -85,12 +85,19 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
 
     return new_issue
 
+
 def unpack_worklogs(logs):
-#TODO: getting a syntax error on import here
-    return [
-        f'{log["creator"]["fullName"]}-{log["type"]["name"] if "name" in log["type"] else "No Worktype"}: {log["text"]};{timestamp_to_datetime(log["date"])};{log["creator"]["email"] if log["creator"]["banned"] is False else ""};{log["duration"]["minutes"]*60}'
-        for log in logs
-    ]
+    unpacked_logs = []
+    for log in logs:
+        name = log["creator"]["fullName"]
+        worktype = log["type"]["name"] if log["type"] != None and "name" in log["type"] else "No Worktype"
+        message = log["text"]
+        entrytime = timestamp_to_datetime(log["date"])
+        user = log["creator"]["email"] if log["creator"]["banned"] is False else ""
+        duration = log["duration"]["minutes"]*60
+        unpacked_logs.append(f'{name} [{worktype}]: {message};{entrytime};{user};{duration}')
+
+    return unpacked_logs 
 
 
 def apply_custom_field_processors(issue: Dict[str, Any]) -> Dict[str, Any]:
@@ -243,7 +250,7 @@ def unpack_comments(comments: list) -> list:
     Returns:
         list : a list of comments in jira import format
     """
-    return [f'{timestamp_to_datetime(comment["created"])};{comment["author"]["email"]};{comment["text"]}' for comment in comments] 
+    return [f'{timestamp_to_datetime(comment["created"])}; {comment["author"]["email"]}; {comment["text"]}' for comment in comments] 
 
 
 def timestamp_to_datetime(timestamp: int) -> str:
@@ -255,7 +262,7 @@ def timestamp_to_datetime(timestamp: int) -> str:
     Returns:
         str : a formatted datetime string
     """
-    return datetime.datetime.fromtimestamp(int(timestamp/1000)).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.datetime.fromtimestamp(int(timestamp/1000)).strftime('%m/%d/%Y %H:%M:%S')
 
 
 def unpack_tags(tags: list) -> list:
