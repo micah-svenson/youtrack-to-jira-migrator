@@ -70,9 +70,6 @@ print("Flattening Issues...")
 all_flattened_unpacked_issues = pd.json_normalize(processed_issues)
 
 # expand list/series values into multiple columns of the same name. (This matches jira's import syntax requirements for mult-value fields)
-all_flattened_unpacked_issues.to_csv('./data/test.csv')
-
-
 print("Expanding Issues...")
 expanded_df_list = [
     all_flattened_unpacked_issues[col].apply(unpackers.flatten_series_to_columns, args=[col]) 
