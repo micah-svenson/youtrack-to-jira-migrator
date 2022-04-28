@@ -278,4 +278,4 @@ def unpack_tags(tags: list) -> list:
     Returns:
         list : a list of tag names
     """
-    return [tag['name'] for tag in tags]
+    return [tag['name'].replace(" ", "-") for tag in tags]
