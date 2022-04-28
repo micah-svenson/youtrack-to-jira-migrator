@@ -58,7 +58,7 @@ def unpack_youtrack_issue(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, 
         "Updated": timestamp_to_datetime(issue["updated"]),
 
         "Reporter": issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None, 
-        "Updater": issue["updater"]["email"] if issue["reporter"]["banned"] is False else None,
+        "Updater": issue["updater"]["email"] if issue["updater"]["banned"] is False else None,
     }
 
     # unpack custom fields
