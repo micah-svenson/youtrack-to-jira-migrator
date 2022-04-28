@@ -52,22 +52,27 @@ issues_list_fields={
 print(f"Requesting {num_issues_to_retrieve} issues from YouTrack starting with Id {num_issues_to_skip+1}...")
 all_issues = requests.get(api_url+"admin/projects/"+project_id+"/issues", params=issues_list_fields, headers=auth_header).json()
 
-worklog_fields = {"fields": "id,author(fullName,email,banned),creator(fullName,email,banned),text,type(name),created,updated,duration(minutes),date,issue(idReadable),attributes(name,value)"}
-# TODO: this is really expensive. one api call per issue is slowing everything down
-issue_lookup_map = {}
-for issue in all_issues:
-    # issue["workItems"] = requests.get(api_url+"issues/"+issue["id"]+"/timeTracking/workItems", headers=auth_header, params=worklog_fields).json()
-    issue_lookup_map[issue["idReadable"]] = issue
-
 # unpack issues from youtrack's json output format to a simpler json format that can be normalized to csv
 print("Unpacking Issues...")
-all_unpacked_issues = [unpackers.unpack_youtrack_issue(issue, issue_lookup_map) for issue in all_issues]
+all_unpacked_issues = {issue["idReadable"]: unpackers.unpack_youtrack_issue(issue) for issue in all_issues}
+
+# worklog_fields = {"fields": "id,author(fullName,email,banned),creator(fullName,email,banned),text,type(name),created,updated,duration(minutes),date,issue(idReadable),attributes(name,value)"}
+# # TODO: this is really expensive. one api call per issue is slowing everything down
+# for issue in all_unpacked_issues:
+#     # issue["workItems"] = requests.get(api_url+"issues/"+issue["id"]+"/timeTracking/workItems", headers=auth_header, params=worklog_fields).json()
+#     pass
+
+# apply any custom processor functions to data fields
+processed_issues = [unpackers.apply_custom_field_processors(all_unpacked_issues[issue_key], issue_lookup_map=all_unpacked_issues) for issue_key in all_unpacked_issues]
 
 # flatten out json. This still leaves some columns as lists/series
 print("Flattening Issues...")
-all_flattened_unpacked_issues = pd.json_normalize(all_unpacked_issues)
+all_flattened_unpacked_issues = pd.json_normalize(processed_issues)
 
 # expand list/series values into multiple columns of the same name. (This matches jira's import syntax requirements for mult-value fields)
+all_flattened_unpacked_issues.to_csv('./data/test.csv')
+
+
 print("Expanding Issues...")
 expanded_df_list = [
     all_flattened_unpacked_issues[col].apply(unpackers.flatten_series_to_columns, args=[col]) 

@@ -31,7 +31,6 @@ fields: >-
     banned
   ),
   resolved,
-  numberInProject,
   comments(
     text,
     author(

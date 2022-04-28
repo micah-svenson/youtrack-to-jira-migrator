@@ -6,6 +6,7 @@ Date Created: 4/25/22
 
 import os
 import datetime
+import functools
 import pandas as pd
 from typing import Tuple, Any, Dict
 
@@ -36,7 +37,7 @@ def flatten_series_to_columns(value: Any, field_name: str) -> pd.Series:
     return pd.Series(value, index=new_index, dtype=object)
 
 
-def unpack_youtrack_issue(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, Any]:
+def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     """Unpack youtrack issue api response into a simpler JSON
 
     This function also applies the custom field processing functions defined in custom_field_processing_functions.py
@@ -48,42 +49,38 @@ def unpack_youtrack_issue(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, 
         Dict[str, Any]: A simplified issue JSON
     """
 
-    new_issue = {
-        # basic fields that apply to all issues regardless of project
-        "Issue Id": issue["idReadable"],
-        "Summary": issue["summary"],
-        "Description": issue["description"],
-
-        "Reported": timestamp_to_datetime(issue["created"]),
-        "Updated": timestamp_to_datetime(issue["updated"]),
-
-        "Reporter": issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None, 
-        "Updater": issue["updater"]["email"] if issue["updater"]["banned"] is False else None,
-    }
+    # do conversions
+    issue["created"] = timestamp_to_datetime(issue["created"])
+    issue["updated"] = timestamp_to_datetime(issue["updated"])
+    issue["resolved"] = timestamp_to_datetime(issue["resolved"])
+    issue["reporter"] = issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None
+    issue["updater"] = issue["updater"]["email"] if issue["updater"]["banned"] is False else None
 
     # unpack custom fields
     for custom in issue["customFields"]:
         field_name, field_values = unpack_field_value(custom)
-        new_issue[field_name] = field_values
+        issue[field_name] = field_values
+    
+    del issue["customFields"]
 
     # unpack links
     for link_group in issue["links"]:
         link_name, link_values = unpack_link_group(link_group)
-        new_issue[link_name] = link_values
+        issue[link_name] = link_values
+
+    del issue["links"]
 
     # unpack tags/labels
-    new_issue["Labels"] = unpack_tags(issue["tags"])
+    issue["tags"] = unpack_tags(issue["tags"])
 
     # unpack comments
-    new_issue["Comments"] = unpack_comments(issue["comments"])
+    issue["comments"] = unpack_comments(issue["comments"])
 
     # unpack worklogs
-    # new_issue["Worklogs"] = unpack_worklogs(issue["workItems"])
+    # issue["Worklogs"] = unpack_worklogs(issue["workItems"])
+    # del issue["workItems"]
 
-    # Apply an custom field processing functions
-    new_issue = apply_custom_field_processors(new_issue, issue_lookup_map)
-
-    return new_issue
+    return issue
 
 
 def unpack_worklogs(logs):
@@ -100,7 +97,7 @@ def unpack_worklogs(logs):
     return unpacked_logs 
 
 
-def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, Any]:
+def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) -> Dict[str, Any]:
     """apply custom field processing function defined in custom_field_processing_functions.py
 
     Args:
@@ -127,14 +124,13 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map) -> Di
 
     funcs_to_apply = filter(key_filter, dir(custom_field_processing_functions))
 
-    import functools
-    def get_raw_issue(issue_id, map={}):
-        return issue_lookup_map[issue_id] if issue_id in issue_lookup_map else None
-    get_other_issue = functools.partial(get_raw_issue, map=issue_lookup_map)
+    def get_raw_issue(issue_id, lookup_map={}):
+        return lookup_map[issue_id] if issue_id in lookup_map else None
+    get_other_issue = functools.partial(get_raw_issue, lookup_map=issue_lookup_map)
 
-    def get_value(key, map={}):
-        return map[key]
-    get_value_current_issue = functools.partial(get_value, map=issue)
+    def get_value(key, lookup_map={}):
+        return lookup_map[key]
+    get_value_current_issue = functools.partial(get_value, lookup_map=issue)
 
     for func_name in funcs_to_apply:
         key_name = func_name.replace('__', '_').replace('_', ' ')
