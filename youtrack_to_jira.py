@@ -54,12 +54,14 @@ all_issues = requests.get(api_url+"admin/projects/"+project_id+"/issues", params
 
 worklog_fields = {"fields": "id,author(fullName,email,banned),creator(fullName,email,banned),text,type(name),created,updated,duration(minutes),date,issue(idReadable),attributes(name,value)"}
 # TODO: this is really expensive. one api call per issue is slowing everything down
+issue_lookup_map = {}
 for issue in all_issues:
     issue["workItems"] = requests.get(api_url+"issues/"+issue["id"]+"/timeTracking/workItems", headers=auth_header, params=worklog_fields).json()
+    issue_lookup_map[issue["idReadable"]] = issue
 
 # unpack issues from youtrack's json output format to a simpler json format that can be normalized to csv
 print("Unpacking Issues...")
-all_unpacked_issues = [unpackers.unpack_youtrack_issue(issue) for issue in all_issues]
+all_unpacked_issues = [unpackers.unpack_youtrack_issue(issue, issue_lookup_map) for issue in all_issues]
 
 # flatten out json. This still leaves some columns as lists/series
 print("Flattening Issues...")

@@ -50,11 +50,13 @@ Date Created: 4/25/22
 """
 from typing import Any, Tuple
 
-def Task_Deliverable_Links(value, _):
+from numpy import isin
+
+def Task_Deliverable_Links(value, *_):
     # Make Task Deliverabe Links field a comment in jira
     return ("Comments", f";;Task Deliverable Links: {value}") if value != None else ("Comments", None)
 
-def Assignees(value, _):
+def Assignees(value, *_):
     if value != None and isinstance(value, list) and len(value) > 1:
         # Overflow multiple assignees into swarmers
         return (["Assignees", "Swarmers"], [value[0], value[1:]])
@@ -62,7 +64,7 @@ def Assignees(value, _):
         # Resassign the original data if only one assignee
         return ("Assignees", value)
 
-def Type(value, get_issue_value):
+def Type(value, get_issue_value, _):
     if "Feature" in value:
         # YouTrack features need to be Jira Epics
         return (["Type", "Epic Name"], ["Epic", get_issue_value("Summary")])
@@ -73,9 +75,35 @@ def Type(value, get_issue_value):
         # Dont do anything for other task types
         return ("Type", value)
 
-def Sprints(value, _):
+def Sprints(value, *_):
     # Jira only takes numbers for sprint ids
     # assign Backlog None
+    if value == None:
+        return ("Sprints", None)
+
     if not isinstance(value, list):
         value = [value]
+    
     return ("Sprints", [[sprint.split(" ")[-1] if "Backlog" not in sprint else None for sprint in value]])
+
+def subtask_of(value, get_issue_value, get_other_issue):
+    if value == None:
+        return (["Epic Link", "Component"], [None, None])
+
+    subtasks = value if isinstance(value, list) else [value] 
+    epic_links = []
+    component_links = []
+    for subtask in subtasks:
+        linked_feature = get_other_issue(subtask)
+        if linked_feature != None:
+            issue_type = None
+            for field in linked_feature["customFields"]:
+                if "Type" in field["name"]:
+                    issue_type = field["value"]
+
+            if issue_type != None:
+                if "Feature" in issue_type:
+                    epic_links.append(linked_feature["summary"])
+                elif "Epic" in issue_type:
+                    component_links.append(linked_feature["summary"])
+    return (["Epic Link", "Component"], [epic_links, component_links])

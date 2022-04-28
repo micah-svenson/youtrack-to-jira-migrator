@@ -36,7 +36,7 @@ def flatten_series_to_columns(value: Any, field_name: str) -> pd.Series:
     return pd.Series(value, index=new_index, dtype=object)
 
 
-def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
+def unpack_youtrack_issue(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, Any]:
     """Unpack youtrack issue api response into a simpler JSON
 
     This function also applies the custom field processing functions defined in custom_field_processing_functions.py
@@ -81,7 +81,7 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     new_issue["Worklogs"] = unpack_worklogs(issue["workItems"])
 
     # Apply an custom field processing functions
-    new_issue = apply_custom_field_processors(new_issue)
+    new_issue = apply_custom_field_processors(new_issue, issue_lookup_map)
 
     return new_issue
 
@@ -100,7 +100,7 @@ def unpack_worklogs(logs):
     return unpacked_logs 
 
 
-def apply_custom_field_processors(issue: Dict[str, Any]) -> Dict[str, Any]:
+def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, Any]:
     """apply custom field processing function defined in custom_field_processing_functions.py
 
     Args:
@@ -128,13 +128,17 @@ def apply_custom_field_processors(issue: Dict[str, Any]) -> Dict[str, Any]:
     funcs_to_apply = filter(key_filter, dir(custom_field_processing_functions))
 
     import functools
+    def get_raw_issue(issue_id, map={}):
+        return issue_lookup_map[issue_id] if issue_id in issue_lookup_map else None
+    get_other_issue = functools.partial(get_raw_issue, map=issue_lookup_map)
+
     def get_value(key, map={}):
         return map[key]
-    get_issue_value = functools.partial(get_value, map=issue)
+    get_value_current_issue = functools.partial(get_value, map=issue)
 
     for func_name in funcs_to_apply:
         key_name = func_name.replace('__', '_').replace('_', ' ')
-        new_key_names, new_values = getattr(custom_field_processing_functions, func_name)(issue[key_name], get_issue_value)
+        new_key_names, new_values = getattr(custom_field_processing_functions, func_name)(issue[key_name], get_value_current_issue, get_other_issue)
         new_key_names = [new_key_names] if not isinstance(new_key_names, list) else new_key_names
         new_values = [new_values] if not isinstance(new_values, list) else new_values
 

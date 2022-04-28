@@ -5,9 +5,9 @@ project_name: "ATAT"
 # The API url for the Youtrack instance
 api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
 # Issue Id number to start importing from
-start_issue: 187
+start_issue: 1
 # Number of issues to retrieve starting from start_issue
-num_issues_to_retrieve: 10
+num_issues_to_retrieve: 100
 # path of youtrack api token
 youtrack_token_path: "./.youtracktoken"
 # path to csv output director
