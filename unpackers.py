@@ -52,7 +52,7 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     # do conversions
     issue["created"] = timestamp_to_datetime(issue["created"])
     issue["updated"] = timestamp_to_datetime(issue["updated"])
-    issue["resolved"] = timestamp_to_datetime(issue["resolved"])
+    issue["resolved"] = timestamp_to_datetime(issue["resolved"]) if issue["resolved"] != None else None
     issue["reporter"] = issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None
     issue["updater"] = issue["updater"]["email"] if issue["updater"]["banned"] is False else None
 

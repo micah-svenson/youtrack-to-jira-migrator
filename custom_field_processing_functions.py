@@ -53,7 +53,7 @@ from typing import Any, Tuple
 
 def Task_Deliverable_Links(value, *_):
     # Make Task Deliverabe Links field a comment in jira
-    return ("Comments", f";;Task Deliverable Links: {value}") if value != None else ("Comments", None)
+    return ("comments", f";;Task Deliverable Links: {value}") if value != None else ("Comments", None)
 
 def Assignees(value, *_):
     if value != None and isinstance(value, list) and len(value) > 1:
@@ -95,6 +95,7 @@ def subtask_of(value, get_issue_value, get_other_issue):
     for parent in parents:
         linked_feature = get_other_issue(parent)
         if linked_feature != None:
+
             if linked_feature["Type"] != None and "Feature" in linked_feature["Type"]:
                     epic_links.append(linked_feature["summary"])
     return ("Epic Link", [epic_links])
