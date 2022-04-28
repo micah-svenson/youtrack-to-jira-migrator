@@ -57,8 +57,8 @@ def unpack_youtrack_issue(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, 
         "Reported": timestamp_to_datetime(issue["created"]),
         "Updated": timestamp_to_datetime(issue["updated"]),
 
-        "Reporter": issue["reporter"]["email"] if issue["reporter"]["banned"] is True else None, 
-        "Updater": issue["updater"]["email"] if issue["reporter"]["banned"] is True else None,
+        "Reporter": issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None, 
+        "Updater": issue["updater"]["email"] if issue["reporter"]["banned"] is False else None,
     }
 
     # unpack custom fields
@@ -78,7 +78,7 @@ def unpack_youtrack_issue(issue: Dict[str, Any], issue_lookup_map) -> Dict[str, 
     new_issue["Comments"] = unpack_comments(issue["comments"])
 
     # unpack worklogs
-    new_issue["Worklogs"] = unpack_worklogs(issue["workItems"])
+    # new_issue["Worklogs"] = unpack_worklogs(issue["workItems"])
 
     # Apply an custom field processing functions
     new_issue = apply_custom_field_processors(new_issue, issue_lookup_map)

@@ -67,10 +67,10 @@ def Assignees(value, *_):
 def Type(value, get_issue_value, _):
     if "Feature" in value:
         # YouTrack features need to be Jira Epics
-        return (["Type", "Epic Name"], ["Epic", get_issue_value("Summary")])
+        return (["Type", "Epic Name"], [value, get_issue_value("Summary")])
     elif "Epic" in value:
         # YouTrack epics are components in Jira
-        return ("Component", get_issue_value("Summary"))
+        return (["Type", "Component"], [value, get_issue_value("Summary")])
     else:
         # Dont do anything for other task types
         return ("Type", value)
@@ -87,12 +87,12 @@ def Sprints(value, *_):
     return ("Sprints", [[sprint.split(" ")[-1] if "Backlog" not in sprint else None for sprint in value]])
 
 def subtask_of(value, get_issue_value, get_other_issue):
+    # retrieve Feature summary's to create Epic links in Jira
     if value == None:
-        return (["Epic Link", "Component"], [None, None])
+        return ("Epic Link", None)
 
     subtasks = value if isinstance(value, list) else [value] 
     epic_links = []
-    component_links = []
     for subtask in subtasks:
         linked_feature = get_other_issue(subtask)
         if linked_feature != None:
@@ -101,9 +101,6 @@ def subtask_of(value, get_issue_value, get_other_issue):
                 if "Type" in field["name"]:
                     issue_type = field["value"]
 
-            if issue_type != None:
-                if "Feature" in issue_type:
+            if issue_type != None and "Epic" in issue_type:
                     epic_links.append(linked_feature["summary"])
-                elif "Epic" in issue_type:
-                    component_links.append(linked_feature["summary"])
-    return (["Epic Link", "Component"], [epic_links, component_links])
+    return ("Epic Link", [epic_links])

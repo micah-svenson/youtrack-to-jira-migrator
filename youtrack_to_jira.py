@@ -56,7 +56,7 @@ worklog_fields = {"fields": "id,author(fullName,email,banned),creator(fullName,e
 # TODO: this is really expensive. one api call per issue is slowing everything down
 issue_lookup_map = {}
 for issue in all_issues:
-    issue["workItems"] = requests.get(api_url+"issues/"+issue["id"]+"/timeTracking/workItems", headers=auth_header, params=worklog_fields).json()
+    # issue["workItems"] = requests.get(api_url+"issues/"+issue["id"]+"/timeTracking/workItems", headers=auth_header, params=worklog_fields).json()
     issue_lookup_map[issue["idReadable"]] = issue
 
 # unpack issues from youtrack's json output format to a simpler json format that can be normalized to csv
