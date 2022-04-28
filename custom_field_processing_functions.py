@@ -99,7 +99,7 @@ def subtask_of(value, get_issue_value, get_other_issue):
             issue_type = None
             for field in linked_feature["customFields"]:
                 if "Type" in field["name"]:
-                    issue_type = field["value"]
+                    issue_type = field["value"]["name"]
 
             if issue_type != None and "Epic" in issue_type:
                     epic_links.append(linked_feature["summary"])
