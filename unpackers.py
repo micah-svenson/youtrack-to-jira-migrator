@@ -5,6 +5,7 @@ Date Created: 4/25/22
 """
 
 import os
+import ast
 import datetime
 import functools
 import pandas as pd
@@ -97,6 +98,18 @@ def unpack_worklogs(logs):
     return unpacked_logs 
 
 
+def list_custom_funcs():
+    """get a definition ordered list of custom functions from the custom_field_procesing_functions.py file"
+
+    Returns:
+        list: list of custom function names
+    """
+    custom_functions_file = "custom_field_processing_functions.py"
+    with open(custom_functions_file) as f:
+        ast_tree = ast.parse(f.read(), filename=custom_functions_file)
+    return [func.name for func in ast_tree.body if isinstance(func, ast.FunctionDef)]
+
+
 def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) -> Dict[str, Any]:
     """apply custom field processing function defined in custom_field_processing_functions.py
 
@@ -109,7 +122,6 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
     Returns:
         Dict[str, Any]: The updated issue
     """
-
     # only apply custom field processors if they exist
     # TODO: move this import to a higher level so it only gets called once
     if os.path.exists('./custom_field_processing_functions.py'):
@@ -122,7 +134,7 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
         unmangled_key = key.replace('__', '_').replace('_', ' ')
         return unmangled_key in issue
 
-    funcs_to_apply = filter(key_filter, dir(custom_field_processing_functions))
+    funcs_to_apply = filter(key_filter, list_custom_funcs())
 
     def get_raw_issue(issue_id, lookup_map={}):
         return lookup_map[issue_id] if issue_id in lookup_map else None
@@ -149,7 +161,14 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
             current_value = issue[key] if key in issue else []
             current_value = [current_value] if not isinstance(current_value, list) else current_value
             new_value = new_values[index] if isinstance(new_values[index], list) else [new_values[index]]
-            issue[key] = current_value + new_value
+            combined_value = current_value + new_value
+            if len(combined_value) == 0:
+                combined_value = None
+            elif len(combined_value) == 1:
+                combined_value = combined_value[0]
+
+            issue[key] = combined_value
+
     return issue
 
 
@@ -223,7 +242,7 @@ def unpack_field_value(field: dict) -> Tuple[str, Any]:
     return (field_name, new_values)
 
 
-def unpack_link_group(link_group: dict) -> Tuple[str, list]:
+def unpack_link_group(link_group: dict) -> Tuple[str, Any]:
     """Unpack a link group name and list of associated issue id's
     Finds the proper direction of the current link type and pairs a list of issue ids in a tuple.
 
@@ -233,9 +252,18 @@ def unpack_link_group(link_group: dict) -> Tuple[str, list]:
     Returns:
         Tuple[str, list]: first value is link type, second value is list of issue ids associated with current issue via link type 
     """
+
+    links = [linked_issue["idReadable"] for linked_issue in link_group["issues"]]
+
+    # make link return more descriptive in the event of some special cases
+    if len(links) == 0:
+        links = None
+    elif len(links) == 1:
+        links = links[0] 
+
     return (
-        link_group["linkType"]["targetToSource"] if link_group["direction"] == "INWARD" else link_group["linkType"]["sourceToTarget"],
-        [linked_issue["idReadable"] for linked_issue in link_group["issues"]]
+        link_group["linkType"]["targetToSource"] if "INWARD" in link_group["direction"] else link_group["linkType"]["sourceToTarget"],
+        links
     )
 
 
