@@ -104,10 +104,6 @@ def Sprints(value, *_):
 def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=None):
     current_issue = get_other_issue(issue_id)
 
-    # Edge cases
-    if any([current_issue == None, "subtask of" not in current_issue, "subtask of" in current_issue and current_issue["subtask of"] == None]):
-        return (None, epic_link)
-
     # add "Epic Link" on the way up the hierarchy 
     if "Feature" in current_issue["Type"]:
         # return summary to add to the "Epic Link" column
@@ -116,6 +112,10 @@ def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=Non
     # Base case. No level higher than a YT Epic
     if "Epic" in current_issue["Type"]:
         return (current_issue["summary"], epic_link)
+
+    # Edge cases
+    if any([current_issue == None, "subtask of" not in current_issue, "subtask of" in current_issue and current_issue["subtask of"] == None]):
+        return (None, epic_link)
 
     return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=epic_link)
 
