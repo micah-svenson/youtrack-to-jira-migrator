@@ -64,6 +64,7 @@ all_unpacked_issues = {issue["idReadable"]: unpackers.unpack_youtrack_issue(issu
 
 # apply any custom processor functions to data fields
 processed_issues = [unpackers.apply_custom_field_processors(all_unpacked_issues[issue_key], issue_lookup_map=all_unpacked_issues) for issue_key in all_unpacked_issues]
+processed_issues = filter(lambda x: x != None, processed_issues)
 
 # flatten out json. This still leaves some columns as lists/series
 print("Flattening Issues...")

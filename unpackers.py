@@ -4,8 +4,10 @@ Author: Micah Svenson
 Date Created: 4/25/22 
 """
 
+from concurrent.futures import process
 import os
 import ast
+import copy
 import datetime
 import functools
 import pandas as pd
@@ -130,19 +132,32 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
         return issue
 
     def key_filter(key: str) -> bool:
-        """filter out custom functions and objects that don't apply to the current issue"""
+        """filter out custom functions and objects that don't apply to the current processed_issue"""
         unmangled_key = key.replace('__', '_').replace('_', ' ')
         return unmangled_key in issue
 
-    funcs_to_apply = filter(key_filter, list_custom_funcs())
-
     def get_raw_issue(issue_id, lookup_map={}):
-        return lookup_map[issue_id] if issue_id in lookup_map else None
+        if issue_id not in lookup_map:
+            raise ValueError(f"Issue {issue_id} does not exist in current scope")
+        return lookup_map[issue_id]
     get_other_issue = functools.partial(get_raw_issue, lookup_map=issue_lookup_map)
 
     def get_value(key, lookup_map={}):
         return lookup_map[key]
     get_value_current_issue = functools.partial(get_value, lookup_map=issue)
+
+    all_custom_funcs = list_custom_funcs()
+
+    # evaluate DELETE_IF if the special custom function has been defined
+    if "DELETE_IF" in all_custom_funcs:
+        delete_issue = getattr(custom_field_processing_functions, "DELETE_IF")(get_value_current_issue, get_other_issue)
+        if delete_issue:
+            return None
+
+    # copy the issue so that custom functions don't interact unexpectedly
+    processed_issue = copy.deepcopy(issue)
+
+    funcs_to_apply = filter(key_filter, list_custom_funcs())
 
     for func_name in funcs_to_apply:
         key_name = func_name.replace('__', '_').replace('_', ' ')
@@ -154,22 +169,12 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
             raise Exception(f"Custom field processing functions must return an equal number of keys and values. {func_name} returned {len(new_key_names)} key names and {len(new_values)} values")
 
         # delete source data so that the next step can cleanly combine new data going into other pre-existing columns
-        del issue[key_name]
+        del processed_issue[key_name]
 
         for index, key in enumerate(new_key_names):
-            # if data is being added to a different existing column, preserve the original data while adding new data.
-            current_value = issue[key] if key in issue else []
-            current_value = [current_value] if not isinstance(current_value, list) else current_value
-            new_value = new_values[index] if isinstance(new_values[index], list) else [new_values[index]]
-            combined_value = current_value + new_value
-            if len(combined_value) == 0:
-                combined_value = None
-            elif len(combined_value) == 1:
-                combined_value = combined_value[0]
+            processed_issue[key] = new_values[index] 
 
-            issue[key] = combined_value
-
-    return issue
+    return processed_issue
 
 
 def unpack_field_value(field: dict) -> Tuple[str, Any]:

@@ -50,20 +50,45 @@ Date Created: 4/25/22
 """
 from typing import Any, Tuple
 
+#TODO: document that this is a special functio
+def DELETE_IF(get_issue_value, _):
+    # delete an entire issue if this function returns True
+    return True if "Epic" in get_issue_value("Type") else False
 
 def subtask_of(value, get_issue_value, get_other_issue):
     # retrieve Feature summary's to create Epic links in Jira
-    # print("subtask of value", value)
-    if value == None:
-        return ("Epic Link", None)
     try:
         component, epic_link = helper_flatten_parent_relationships(value, get_other_issue)
         # print(f"successful link: {epic_link}")
     except Exception as e:
-        print(f"Warning: Failed to create epic link for {value}: {e}")
+        if value != None:
+            print(f"Warning: Failed to traverse relationships for {value}: {e}")
         component, epic_link = (None, None)
                 
-    return (["Epic Link", "Component", "subtask of"], [epic_link, component, value])
+    return (["Component", "Epic Link", "subtask of"], [component, epic_link, value])
+
+
+def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=None):
+    current_issue = get_other_issue(issue_id)
+    new_epic_link = epic_link
+    component = None
+    # print(current_issue["Type"])
+    # add "Epic Link" on the way up the hierarchy 
+    if "Feature" in current_issue["Type"]:
+        # return summary to add to the "Epic Link" column
+        new_epic_link = current_issue["summary"]
+
+    # Base case. No level higher than a YT Epic
+    if "Epic" in current_issue["Type"]:# or "Component" in current_issue["Type"]:
+        component = current_issue["summary"]
+        return (component, new_epic_link)
+
+    # Edge cases
+    if any(["subtask of" not in current_issue, "subtask of" in current_issue and current_issue["subtask of"] == None]):
+        return (component, new_epic_link)
+
+    # print(f'do the recursive call: {current_issue["Type"]}')
+    return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=new_epic_link)
 
 
 def Task_Deliverable_Links(value, *_):
@@ -83,8 +108,9 @@ def Type(value, get_issue_value, _):
         # YouTrack features need to be Jira Epics
         return (["Type", "Epic Name"], ["Epic", get_issue_value("summary")])
     elif "Epic" in value:
+        return ("Type", "Component")
         # YouTrack epics are components in Jira
-        return (["Type", "Component"], ["Component", get_issue_value("summary")])
+        # return (["Type", "Component"], ["Component", get_issue_value("summary")])
     else:
         # Dont do anything for other task types
         return ("Type", value)
@@ -99,23 +125,4 @@ def Sprints(value, *_):
         value = [value]
     
     return ("Sprints", [[sprint.split(" ")[-1] if "Backlog" not in sprint else None for sprint in value]])
-
-
-def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=None):
-    current_issue = get_other_issue(issue_id)
-
-    # add "Epic Link" on the way up the hierarchy 
-    if "Feature" in current_issue["Type"]:
-        # return summary to add to the "Epic Link" column
-        epic_link = current_issue["summary"]
-
-    # Base case. No level higher than a YT Epic
-    if "Epic" in current_issue["Type"]:
-        return (current_issue["summary"], epic_link)
-
-    # Edge cases
-    if any([current_issue == None, "subtask of" not in current_issue, "subtask of" in current_issue and current_issue["subtask of"] == None]):
-        return (None, epic_link)
-
-    return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=epic_link)
 
