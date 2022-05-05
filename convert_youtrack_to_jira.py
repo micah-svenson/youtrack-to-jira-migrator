@@ -15,7 +15,7 @@ import pandas as pd
 from io import StringIO
 from pathlib import Path
 from colorama import Fore, Style
-from youtrack_data import get_issues
+from get_youtrack_data import get_issues
 
 
 def dataframe_to_csv(issues_dataframe):

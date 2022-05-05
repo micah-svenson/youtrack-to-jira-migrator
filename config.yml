@@ -7,7 +7,7 @@ api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
 # Issue Id number to start importing from
 start_issue: 1
 # Number of issues to retrieve starting from start_issue
-num_issues_to_retrieve: 1000
+num_issues_to_retrieve: 10
 # path of youtrack api token
 youtrack_token_path: "./.youtracktoken"
 # directory path for loading and saving data

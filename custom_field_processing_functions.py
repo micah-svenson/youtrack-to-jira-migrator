@@ -62,7 +62,7 @@ def subtask_of(value, get_issue_value, get_other_issue):
         # print(f"successful link: {epic_link}")
     except Exception as e:
         if value != None:
-            print(f"Warning: Failed to traverse relationships for {value}: {e}")
+            print(f"Warning: Failed to traverse relationships for {get_issue_value('idReadable')}: {e}")
         component, epic_link = (None, None)
                 
     return (["Component", "Epic Link", "subtask of"], [component, epic_link, value])
