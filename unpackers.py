@@ -11,6 +11,7 @@ import copy
 import datetime
 import functools
 import pandas as pd
+import custom_field_processing_functions
 from typing import Tuple, Any, Dict
 
 
@@ -52,41 +53,40 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
         Dict[str, Any]: A simplified issue JSON
     """
 
-    # do conversions
     issue["created"] = timestamp_to_datetime(issue["created"])
     issue["updated"] = timestamp_to_datetime(issue["updated"])
     issue["resolved"] = timestamp_to_datetime(issue["resolved"]) if issue["resolved"] != None else None
     issue["reporter"] = issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None
     issue["updater"] = issue["updater"]["email"] if issue["updater"]["banned"] is False else None
 
-    # unpack custom fields
     for custom in issue["customFields"]:
         field_name, field_values = unpack_field_value(custom)
         issue[field_name] = field_values
-    
+
     del issue["customFields"]
 
-    # unpack links
     for link_group in issue["links"]:
         link_name, link_values = unpack_link_group(link_group)
         issue[link_name] = link_values
 
     del issue["links"]
 
-    # unpack tags/labels
     issue["tags"] = unpack_tags(issue["tags"])
-
-    # unpack comments
     issue["comments"] = unpack_comments(issue["comments"])
-
-    # unpack worklogs
-    # issue["Worklogs"] = unpack_worklogs(issue["workItems"])
-    # del issue["workItems"]
 
     return issue
 
 
-def unpack_worklogs(logs):
+def unpack_worklogs(logs: Any) -> list:
+    """unpack youtrack worklogs into Jira import format
+
+    Args:
+        logs (Any): youtrack logs
+
+    Returns:
+        list: A list of Jira formatted worklogs
+    """
+
     unpacked_logs = []
     for log in logs:
         name = log["creator"]["fullName"]
@@ -100,7 +100,7 @@ def unpack_worklogs(logs):
     return unpacked_logs 
 
 
-def list_custom_funcs():
+def list_custom_funcs() -> list:
     """get a definition ordered list of custom functions from the custom_field_procesing_functions.py file"
 
     Returns:
@@ -124,13 +124,8 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
     Returns:
         Dict[str, Any]: The updated issue
     """
-    # only apply custom field processors if they exist
-    # TODO: move this import to a higher level so it only gets called once
-    if os.path.exists('./custom_field_processing_functions.py'):
-        import custom_field_processing_functions
-    else:
-        return issue
 
+    # define helper functions to pass to custom functions
     def key_filter(key: str) -> bool:
         """filter out custom functions and objects that don't apply to the current processed_issue"""
         unmangled_key = key.replace('__', '_').replace('_', ' ')

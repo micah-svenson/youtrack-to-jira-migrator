@@ -1,18 +1,29 @@
-# Use this file to configure which project should be exported from YouTrack
+# Convert YouTrack Issues into Jira Issues
+# Pulls YouTrack Issue data in JSON format either from a local file or from the YouTrack API
+# Converts Issues to Jira Format and applies user defined custom processing functions if additional modifications are necessary.
+# Jira Issues are compatible with the System Admin version of their CSV import tool in Jira Cloud.
+# Use:
+#     Configure settings in this file. Each configuration has inline documentation. 
+#     For additional modifications to fields, add functions to custom_field_processing_functions.py
+# 
+# Author: Micah Svenson
+# Date Created: 4/25/22 
+#
 
-# The name of the project you want to export from YouTrack
+# The name of the project you want to export from YouTrack. This must be an exact match to the YouTrack project name
 project_name: "ATAT"
 # The API url for the Youtrack instance
 api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
-# Issue Id number to start importing from
+# Issue Id number to start importing from with the given project.
 start_issue: 1
-# Number of issues to retrieve starting from start_issue
+# Number of issues to retrieve starting from start_issue. If this value is greater than the number of issues in the project, the API will retrieve all project issues.
 num_issues_to_retrieve: 1000
 # path of youtrack api token
 youtrack_token_path: "./.youtracktoken"
 # directory path for loading and saving data
 data_storage_path: "./data/"
 # fields to retrieve from each YouTrack issue
+# Note: It is strongly advised to only add new values to this list. Removing values may break the tool
 issue_fields: >-
   id,
   idReadable,
@@ -65,6 +76,7 @@ issue_fields: >-
     )
   )
 
+# Note: It is strongly advised to only add new values to this list. Removing values may break the tool
 work_item_fields: >-
   id,
   author(

@@ -1,9 +1,18 @@
+""" This module can be run as a script to only Download YouTrack data from the API, but is also used automatically in the convert_youtrack_to_jira.py script
+Use:
+    Configure settings in get_youtrack_data.yml
+    Run this script directly to download data
+    i.e. $~ python3 get_youtrack_data.py
 
-# Bulk Download Issues, WOrklogs, etc from YouTrack API and store as JSON files. 
+Author: Micah Svenson
+Date Created: 4/25/22 
+"""
+
 import re
 import json
+import yaml
 import requests
-from typing import Tuple, Any
+from typing import Tuple 
 from pathlib import Path
 
 
@@ -71,16 +80,20 @@ def _download_data(config: dict) -> Tuple[list, list]:
     return all_issues
 
 
-def get_issues(config: dict) -> Tuple[list, list]:
-    base_file_path = Path(config["data_storage_path"])
-    base_file_path.mkdir(parents=True, exist_ok=True)
-    issue_data_path = base_file_path / f'{config["project_name"]}_youtrack_issues.json'
+def get_issues(config: dict) -> list:
+    """get issue data from either from local storage or from the YouTrack API. It prefers locally stored data.
 
+    Args:
+        config (dict): configuration from config.yml 
+
+    Returns:
+        list: a list of project issues 
+    """
+    issue_data_path = get_issue_data_path(config)
     try:
         with open(issue_data_path, 'r') as f:
             all_issues = json.load(f)
         print(f"Issue data successfully loaded from {issue_data_path}")
-
     except Exception:
         print("No local issue data. Attempting Download...")
         all_issues = _download_data(config)
@@ -91,3 +104,38 @@ def get_issues(config: dict) -> Tuple[list, list]:
         print(f'YouTrack data written to {issue_data_path}')
     
     return all_issues
+
+
+def json_to_file(json_data: list, path: Path) -> None:
+    """ write json data to file
+
+    Args:
+        issues (list): list of youtrack issues
+        path (Path): _description_
+    """
+    with open(path, 'w') as file:
+        json.dump(issues, file)
+
+
+def get_issue_data_path(config: dict) -> Path:
+    """ Get path to issue data from configuration. Creates path if it doesnt already exist
+
+    Args:
+        config (dict): config from config.yml
+
+    Returns:
+        Path: File path issue data file
+    """
+    base_file_path = Path(config["data_storage_path"])
+    base_file_path.mkdir(parents=True, exist_ok=True)
+    return base_file_path / f'{config["project_name"]}_youtrack_issues.json'
+
+
+if __name__ == "__main__":
+    with open("config.yml", "r") as file:
+        config = yaml.safe_load(file)
+
+    all_issues = _download_data(config)
+
+    with open(get_issue_data_path(config), 'w') as file:
+        json.dump(all_issues, file)

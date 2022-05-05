@@ -48,15 +48,46 @@ Examples:
 Author: Micah Svenson
 Date Created: 4/25/22 
 """
-from typing import Any, Tuple
+
+from typing import Any, Tuple, Callable
 import re
 
-#TODO: document that this is a special functio
-def DELETE_IF(get_issue_value, _):
-    # delete an entire issue if this function returns True
+
+def DELETE_IF(get_issue_value: Callable, _: Callable) -> bool:
+    """Delete the entire current issue if this functions returns True
+
+    Args:
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        bool: Deletes entire issue if True, does nothing if False
+    """
+    # Delete YouTrack Epics, because they wont be used in Jira as Components and will just take up extra task numbers
     return True if "Epic" in get_issue_value("Type") else False
 
-def subtask_of(value, get_issue_value, get_other_issue):
+
+def subtask_of(value: Any, get_issue_value: Callable, get_other_issue: Callable) -> Tuple:
+    """ Traverse issue parent relationships and to map YouTrack Hierarchy to Jira Hierarchy
+        YouTrack to Jira Mappings
+        1. Epic -> Component
+            * Jira csv import requires component to be its own column and requires a Name, not an Id. YouTrack Epic summary is mapped to Jira Component column.
+        2. Feature -> Epic
+            * Jira Epics require a column called "Epic Name" that holds the summary of the Youtrack Feature issue.
+            * Jira issues also have "Epic Links" to relate sub issues to the Epic. An "Epic Links" column is populated with the "Epic Name" of an Epic that the current issue is a child of.
+        3. User Story -> Story
+            * Story mappings are mostly unchanged, just slight naming
+        4. Task -> Story (sort of)
+            * In the new Jira hierarchy, ATAT wont use Subtasks of stories, but to preserve the legacy structure of tasks, a new column is created called "youtrack subtask of" to track when a Story had sub-tasks.
+
+    Args:
+        value (Any): the current issue value of subtask of
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
     # retrieve Feature summary's to create Epic links in Jira
     try:
         component, epic_link, subtask_of_link = helper_flatten_parent_relationships(value, get_other_issue)
@@ -69,7 +100,19 @@ def subtask_of(value, get_issue_value, get_other_issue):
     return (["Component", "Epic Link", "youtrack subtask of", "subtask of"], [component, epic_link, subtask_of_link, value])
 
 
-def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=None, subtask_of_link=None):
+def helper_flatten_parent_relationships(issue_id: str, get_other_issue: Callable, epic_link: str=None, subtask_of_link: str=None) -> Tuple:
+    """ Helper function that recursively searches through all parent relationships of the current issue
+
+    Args:
+        issue_id (str): Id of a parent issue
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+        epic_link (str, optional): Stores an Epic link relationship to the current issue if applicable. Defaults to None.
+        subtask_of_link (str, optional): Stores a subtask link relationship for the current issue if applicable. Defaults to None.
+
+    Returns:
+        Tuple: Tuple containing all possible issue relationships
+    """
+
     current_issue = get_other_issue(issue_id)
     new_epic_link = epic_link
     new_subtask_of_link = subtask_of_link
@@ -96,11 +139,32 @@ def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=Non
     return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=new_epic_link, subtask_of_link=new_subtask_of_link)
 
 
-def Task_Deliverable_Links(value, *_):
+def Task_Deliverable_Links(value: Any, *_) -> Tuple:
+    """Convert task deliverable links field into a comment
+
+    Args:
+        value (_type_): The content of the current task deliverable links field
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
     # Make Task Deliverabe Links field a comment in jira
     return ("comments", f";;Task Deliverable Links: {value}") if value != None else ("Comments", None)
 
-def Assignees(value, *_):
+
+def Assignees(value: Any, *_) -> Tuple:
+    """Overflow multiple assignee's into the "Swarmers" custom field.
+
+    Args:
+        value (Any): Assignee names for the current issue
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
     if value != None and isinstance(value, list) and len(value) > 1:
         # Overflow multiple assignees into swarmers
         return (["Assignees", "Swarmers"], [value[0], value[1:]])
@@ -108,7 +172,24 @@ def Assignees(value, *_):
         # Resassign the original data if only one assignee
         return ("Assignees", value)
 
-def Type(value, get_issue_value, _):
+
+def Type(value: Any, get_issue_value: Callable, _) -> Tuple:
+    """ Map issue types from Youtrack types to Jira Types. This is Fairly ATAT specific.
+        YouTrack to Jira Mappings:
+        1. Epic -> Component
+        2. Feature -> Epic
+        3. User Story -> Story
+        4. Task -> Story
+
+    Args:
+        value (Any): The current issue's Type
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
+
     if "Feature" in value:
         # YouTrack features need to be Jira Epics
         return (["Type", "Epic Name"], ["Epic", get_issue_value("summary")])
@@ -120,7 +201,19 @@ def Type(value, get_issue_value, _):
         # Dont do anything for other task types
         return ("Type", value)
 
-def Sprints(value, *_):
+def Sprints(value: Any, *_) -> Tuple:
+    """Convert Sprint names into Sprint Id's for the Jira import tool. Because Jira, there is an Id offset that will need to be manually set based on when you created sprints in Jira. 
+        Note: For this to work, All sprints referenced in the YouTrack Issue set must be manually created in Jira IN SEQUENCE so that the Id's in the CSV import match.
+
+    Args:
+        value (Any): YouTrack Sprint Name
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
+
     # Jira only takes numbers for sprint ids
     # assign Backlog None
 
@@ -130,17 +223,28 @@ def Sprints(value, *_):
     offset = 100
     if value == None:
         return ("Sprints", None)
-
     if not isinstance(value, list):
         value = [value]
     return ("Sprints", [[int(sprint.split(" ")[-1]) + offset if "Backlog" not in sprint else None for sprint in value]])
 
 
-def description(value, *_):
-    h1 = re.sub("(?m)^#(?!#)", "h1.", value)
-    h2 = re.sub("(?m)^#{2}(?!#)", "h2.", h1)
-    h3 = re.sub("(?m)^#{3}(?!#)", "h3.", h2)
-    h4 = re.sub("(?m)^#{4}(?!#)", "h4.", h3)
-    h5 = re.sub("(?m)^#{5}(?!#)", "h5.", h4)
-    h6 = re.sub("(?m)^#{6}(?!#)", "h6.", h5)
-    return ("description", h6)
+def description(value: Any, *_) -> Tuple:
+    """Convert Markdown headings (#,##,etc) to Jira Markup headings (h1.,h2., etc) because Jira can't handle markdown through the importer
+        Note: This is barebones and doesnt convert other syntax elements. They were close enough for the most part
+
+    Args:
+        value (Any): the current issue description
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
+
+    sub_h1 = re.sub("(?m)^#(?!#)", "h1.", value)
+    sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
+    sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
+    sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
+    sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
+    all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
+    return ("description", all_subs)

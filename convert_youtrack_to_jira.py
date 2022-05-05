@@ -1,13 +1,13 @@
-""" YouTrack to Jira export script
-Pull data from the YouTrack API and convert it to a CSV compatible with Jira's CSV import tool. 
+""" Run this script to convert YouTrack Issues into Jira issues
 Use:
-    Configure project settings in youtrack_to_jira.yml
-    If additional processing is needed on individual fields, TODO
+    Configure Youtrack data settings in youtrack_data_config.yml
+    Add functions to custom_field_processing_functions.py
 
 
 Author: Micah Svenson
 Date Created: 4/25/22 
 """
+
 import csv
 import yaml
 import unpackers
@@ -18,7 +18,12 @@ from colorama import Fore, Style
 from get_youtrack_data import get_issues
 
 
-def dataframe_to_csv(issues_dataframe):
+def dataframe_to_csv(issues_dataframe: pd.DataFrame) -> None:
+    """converts a pandas dataframe with mangled column names to csv with clean column names
+
+    Args
+        issues_dataframe (pd.DataFrame): a dataframe of processed Jira Issues
+    """
     data_storage_path = Path(config["data_storage_path"])
     final_csv_path = data_storage_path / f'{config["project_name"]}_jira_issues.csv'
     data_string= issues_dataframe.to_csv()
@@ -37,14 +42,19 @@ def dataframe_to_csv(issues_dataframe):
 
 
 def main():
+    """
+    Convert YouTrack Issues to Jira Issues and write csv
+    """
+
     print("Converting YouTrack Issues to Jira Issues...")
     # load issues from local storage or from the API
     all_issues = get_issues(config)
+
     # unpack issues from youtrack's json output format to a simpler json format that can be normalized to csv
     print("Unpacking Issues...")
     all_unpacked_issues = {key: unpackers.unpack_youtrack_issue(issue) for key, issue in all_issues.items()}
 
-    # Fix unique issue with relates links because both sides of the relationship look the same
+    # Fix unique issue with "relates to" links due to both sides of the relationship looking the same
     def fix_relates_links(issue, all_issues):
         if issue["relates to"] != None:
             links = issue["relates to"] if isinstance(issue["relates to"], list) else [issue["relates to"]]
@@ -57,7 +67,6 @@ def main():
     processed_issues = [unpackers.apply_custom_field_processors(all_unpacked_issues[issue_key], issue_lookup_map=all_unpacked_issues) for issue_key in all_unpacked_issues]
     processed_issues = filter(lambda x: x != None, processed_issues)
 
-    # into multiple columns of the same name. (This matches jira's import syntax requirements for mult-value fields)
     print("Flattening Issues...")
     # flatten out json. This still leaves some columns as lists/series
     issue_df = pd.json_normalize(processed_issues)
@@ -71,7 +80,6 @@ def main():
 
 
 if __name__ == '__main__':
-    # configuration
     with open("config.yml", "r") as file:
         config = yaml.safe_load(file)
 
