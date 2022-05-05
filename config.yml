@@ -7,13 +7,13 @@ api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
 # Issue Id number to start importing from
 start_issue: 1
 # Number of issues to retrieve starting from start_issue
-num_issues_to_retrieve: 30
+num_issues_to_retrieve: 1000
 # path of youtrack api token
 youtrack_token_path: "./.youtracktoken"
-# path to csv output director
-csv_output_path: "./data/"
-# fields to retreive from each YouTrack issue
-fields: >-
+# directory path for loading and saving data
+data_storage_path: "./data/"
+# fields to retrieve from each YouTrack issue
+issue_fields: >-
   id,
   idReadable,
   summary,
@@ -63,4 +63,34 @@ fields: >-
       email,
       banned
     )
+  )
+
+work_item_fields: >-
+  id,
+  author(
+    fullName,
+    email,
+    banned
+  ),
+  creator(
+    fullName,
+    email,
+    banned
+  ),
+  text,
+  type(
+    name
+  ),
+  created,
+  updated,
+  duration(
+    minutes
+  ),
+  date,
+  issue(
+    idReadable
+  ),
+  attributes(
+    name,
+    value
   )

@@ -125,8 +125,3 @@ def Sprints(value, *_):
         value = [value]
     
     return ("Sprints", [[sprint.split(" ")[-1] if "Backlog" not in sprint else None for sprint in value]])
-
-def Estimation(value, *_):
-    # attempt to fix weird time bug in csv import
-    updated_value = value * 60 if value != None else None
-    return ("Estimation", updated_value)
