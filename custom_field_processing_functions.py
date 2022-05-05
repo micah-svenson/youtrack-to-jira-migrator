@@ -220,7 +220,7 @@ def Sprints(value: Any, *_) -> Tuple:
     # Jira uses internal Id's to map sprints via the csv importer for some unknowable reason.
     # This offset is intended to align the internal jiraId with ATAT sprint numbers.
     # Note: prequisite is that All desired sprints have been manually created in Jira and that all internal Jira Id's are sequential
-    offset = 100
+    offset = 7
     if value == None:
         return ("Sprints", None)
     if not isinstance(value, list):
