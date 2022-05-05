@@ -137,10 +137,10 @@ def Sprints(value, *_):
 
 
 def description(value, *_):
-    h1 = re.sub("(?m)^#(?!#)(.*)", "h1.", value)
-    h2 = re.sub("(?m)^#{2}(?!#)(.*)", "h2.", h1)
-    h3 = re.sub("(?m)^#{3}(?!#)(.*)", "h3.", h2)
-    h4 = re.sub("(?m)^#{4}(?!#)(.*)", "h4.", h3)
-    h5 = re.sub("(?m)^#{5}(?!#)(.*)", "h5.", h4)
-    h6 = re.sub("(?m)^#{6}(?!#)(.*)", "h6.", h5)
+    h1 = re.sub("(?m)^#(?!#)", "h1.", value)
+    h2 = re.sub("(?m)^#{2}(?!#)", "h2.", h1)
+    h3 = re.sub("(?m)^#{3}(?!#)", "h3.", h2)
+    h4 = re.sub("(?m)^#{4}(?!#)", "h4.", h3)
+    h5 = re.sub("(?m)^#{5}(?!#)", "h5.", h4)
+    h6 = re.sub("(?m)^#{6}(?!#)", "h6.", h5)
     return ("description", h6)
