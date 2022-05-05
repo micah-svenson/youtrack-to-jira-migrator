@@ -49,6 +49,7 @@ Author: Micah Svenson
 Date Created: 4/25/22 
 """
 from typing import Any, Tuple
+import re
 
 #TODO: document that this is a special functio
 def DELETE_IF(get_issue_value, _):
@@ -64,13 +65,6 @@ def subtask_of(value, get_issue_value, get_other_issue):
         if value != None:
             print(f"Warning: Failed to traverse relationships for {get_issue_value('idReadable')}: {e}")
         component, epic_link, subtask_of_link = (None, None, None)
-
-    # old_relates_to = get_issue_value("relates to")
-    # if old_relates_to != None:
-    #     if isinstance(old_relates_to, list):
-    #         relates_link = [relates_link, *old_relates_to]
-    #     else:
-    #         relates_link = [relates_link, old_relates_to]
                
     return (["Component", "Epic Link", "youtrack subtask of", "subtask of"], [component, epic_link, subtask_of_link, value])
 
@@ -140,3 +134,13 @@ def Sprints(value, *_):
     if not isinstance(value, list):
         value = [value]
     return ("Sprints", [[int(sprint.split(" ")[-1]) + offset if "Backlog" not in sprint else None for sprint in value]])
+
+
+def description(value, *_):
+    h1 = re.sub("(?m)^#(?!#)(.*)", "h1.", value)
+    h2 = re.sub("(?m)^#{2}(?!#)(.*)", "h2.", h1)
+    h3 = re.sub("(?m)^#{3}(?!#)(.*)", "h3.", h2)
+    h4 = re.sub("(?m)^#{4}(?!#)(.*)", "h4.", h3)
+    h5 = re.sub("(?m)^#{5}(?!#)(.*)", "h5.", h4)
+    h6 = re.sub("(?m)^#{6}(?!#)(.*)", "h6.", h5)
+    return ("description", h6)

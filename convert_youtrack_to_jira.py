@@ -43,6 +43,16 @@ def main():
     # unpack issues from youtrack's json output format to a simpler json format that can be normalized to csv
     print("Unpacking Issues...")
     all_unpacked_issues = {key: unpackers.unpack_youtrack_issue(issue) for key, issue in all_issues.items()}
+
+    # Fix unique issue with relates links because both sides of the relationship look the same
+    def fix_relates_links(issue, all_issues):
+        if issue["relates to"] != None:
+            links = issue["relates to"] if isinstance(issue["relates to"], list) else [issue["relates to"]]
+            issue["relates to"] = list(filter(lambda link: issue["idReadable"] not in all_issues[link]["relates to"], links))
+        return issue
+
+    [fix_relates_links(all_unpacked_issues[issue], all_unpacked_issues) for issue in all_unpacked_issues]
+
     # apply any custom processor functions to data fields
     processed_issues = [unpackers.apply_custom_field_processors(all_unpacked_issues[issue_key], issue_lookup_map=all_unpacked_issues) for issue_key in all_unpacked_issues]
     processed_issues = filter(lambda x: x != None, processed_issues)
