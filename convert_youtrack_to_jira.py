@@ -19,7 +19,6 @@ from get_youtrack_data import get_issues
 
 
 def dataframe_to_csv(issues_dataframe):
-    # Unmangle the non-unique column names, write a clean header to a new csv and copy all of the data.
     data_storage_path = Path(config["data_storage_path"])
     final_csv_path = data_storage_path / f'{config["project_name"]}_jira_issues.csv'
     data_string= issues_dataframe.to_csv()
@@ -29,6 +28,7 @@ def dataframe_to_csv(issues_dataframe):
         reader = csv.reader(temp_csv, delimiter=',')
         writer = csv.writer(new_file, delimiter=',')
         old_header = next(reader)
+        # Unmangle the non-unique column names, write a clean header to a new csv and copy all of the data.
         new_header = [col.split(":")[0] for col in old_header]
         writer.writerow(new_header)
         [writer.writerow(line) for line in reader]
@@ -38,14 +38,11 @@ def dataframe_to_csv(issues_dataframe):
 
 def main():
     print("Converting YouTrack Issues to Jira Issues...")
-
     # load issues from local storage or from the API
     all_issues = get_issues(config)
-
     # unpack issues from youtrack's json output format to a simpler json format that can be normalized to csv
     print("Unpacking Issues...")
     all_unpacked_issues = {key: unpackers.unpack_youtrack_issue(issue) for key, issue in all_issues.items()}
-
     # apply any custom processor functions to data fields
     processed_issues = [unpackers.apply_custom_field_processors(all_unpacked_issues[issue_key], issue_lookup_map=all_unpacked_issues) for issue_key in all_unpacked_issues]
     processed_issues = filter(lambda x: x != None, processed_issues)

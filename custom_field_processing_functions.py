@@ -58,21 +58,32 @@ def DELETE_IF(get_issue_value, _):
 def subtask_of(value, get_issue_value, get_other_issue):
     # retrieve Feature summary's to create Epic links in Jira
     try:
-        component, epic_link = helper_flatten_parent_relationships(value, get_other_issue)
+        component, epic_link, subtask_of_link = helper_flatten_parent_relationships(value, get_other_issue)
         # print(f"successful link: {epic_link}")
     except Exception as e:
         if value != None:
             print(f"Warning: Failed to traverse relationships for {get_issue_value('idReadable')}: {e}")
-        component, epic_link = (None, None)
-                
-    return (["Component", "Epic Link", "subtask of"], [component, epic_link, value])
+        component, epic_link, subtask_of_link = (None, None, None)
+
+    # old_relates_to = get_issue_value("relates to")
+    # if old_relates_to != None:
+    #     if isinstance(old_relates_to, list):
+    #         relates_link = [relates_link, *old_relates_to]
+    #     else:
+    #         relates_link = [relates_link, old_relates_to]
+               
+    return (["Component", "Epic Link", "youtrack subtask of", "subtask of"], [component, epic_link, subtask_of_link, value])
 
 
-def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=None):
+def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=None, subtask_of_link=None):
     current_issue = get_other_issue(issue_id)
     new_epic_link = epic_link
+    new_subtask_of_link = subtask_of_link
     component = None
-    # print(current_issue["Type"])
+
+    if "User Story" in current_issue["Type"]:
+        new_subtask_of_link = current_issue["idReadable"]
+
     # add "Epic Link" on the way up the hierarchy 
     if "Feature" in current_issue["Type"]:
         # return summary to add to the "Epic Link" column
@@ -81,14 +92,14 @@ def helper_flatten_parent_relationships(issue_id, get_other_issue, epic_link=Non
     # Base case. No level higher than a YT Epic
     if "Epic" in current_issue["Type"]:# or "Component" in current_issue["Type"]:
         component = current_issue["summary"]
-        return (component, new_epic_link)
+        return (component, new_epic_link, new_subtask_of_link)
 
     # Edge cases
     if any(["subtask of" not in current_issue, "subtask of" in current_issue and current_issue["subtask of"] == None]):
-        return (component, new_epic_link)
+        return (component, new_epic_link, new_subtask_of_link)
 
     # print(f'do the recursive call: {current_issue["Type"]}')
-    return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=new_epic_link)
+    return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=new_epic_link, subtask_of_link=new_subtask_of_link)
 
 
 def Task_Deliverable_Links(value, *_):
