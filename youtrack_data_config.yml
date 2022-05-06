@@ -11,7 +11,7 @@
 #
 
 # The short name of the project you want to export from YouTrack. i.e. ATAT instead of Advanced Tactics, SWA instead of SSDP Web App, etc. This must be an exact match to the YouTrack project name
-project_name: "SWA"
+project_name: "ATAT"
 # The API url for the Youtrack instance
 api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
 # Flag to override preference for loading local data
