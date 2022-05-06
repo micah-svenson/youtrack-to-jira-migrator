@@ -248,3 +248,26 @@ def description(value: Any, *_) -> Tuple:
     sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
     all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
     return ("description", all_subs)
+
+
+def comments(value: Any, *_) -> Tuple:
+    """Convert Markdown headings (#,##,etc) to Jira Markup headings (h1.,h2., etc) because Jira can't handle markdown through the importer
+        Note: This is barebones and doesnt convert other syntax elements. They were close enough for the most part
+
+    Args:
+        value (Any): the current issue description
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
+
+    sub_h1 = re.sub("(?m)^#(?!#)", "h1.", value)
+    sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
+    sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
+    sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
+    sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
+    all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
+    return ("comments", all_subs)
+
