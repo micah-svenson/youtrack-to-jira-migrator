@@ -63,7 +63,7 @@ def _download_data(config: dict) -> Tuple[list, list]:
 
     # Download Worklog
     worklog_endpoint = f'{api_url}workItems'
-    work_item_fields = {"fields": requested_work_item_fields, "query": f'project: {project_name}'}
+    work_item_fields = {"fields": requested_work_item_fields, "query": f'project: {project_name}', "$top": -1}
     work_items_response = requests.get(worklog_endpoint, headers=auth_header, params=work_item_fields)
     work_items_response.raise_for_status()
     all_work_items = work_items_response.json()
