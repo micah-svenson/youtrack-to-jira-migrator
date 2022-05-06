@@ -14,6 +14,8 @@
 project_name: "ATAT"
 # The API url for the Youtrack instance
 api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
+# Flag to override preference for loading local data
+prefer_api: True
 # Issue Id number to start importing from with the given project.
 start_issue: 1
 # Number of issues to retrieve starting from start_issue. If this value is greater than the number of issues in the project, the API will retrieve all project issues.

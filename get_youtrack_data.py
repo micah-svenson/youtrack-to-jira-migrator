@@ -28,6 +28,7 @@ def _download_data(config: dict) -> Tuple[list, list]:
     Returns:
         Tuple[list, list]: _description_
     """
+
     # load youtrack token
     yt_token_path = Path(config["youtrack_token_path"])
     with open(yt_token_path) as file:
@@ -41,7 +42,6 @@ def _download_data(config: dict) -> Tuple[list, list]:
     requested_issue_fields = re.sub(r"[\n\t\s]*", "", config["issue_fields"])
     requested_work_item_fields = re.sub(r"[\n\t\s]*", "", config["work_item_fields"])
     auth_header = {"Authorization": f"Bearer {auth_token}"}
-
 
     # Find Project Id from Project Name
     print("getting youtrack project id...")
@@ -63,10 +63,11 @@ def _download_data(config: dict) -> Tuple[list, list]:
 
     # Download Worklog
     worklog_endpoint = f'{api_url}workItems'
-    work_item_fields = {"fields": requested_work_item_fields}
+    work_item_fields = {"fields": requested_work_item_fields, "query": f'project: {project_name}'}
     work_items_response = requests.get(worklog_endpoint, headers=auth_header, params=work_item_fields)
     work_items_response.raise_for_status()
     all_work_items = work_items_response.json()
+
 
     # Merge worklogs into issues
     for work_item in all_work_items:
@@ -74,8 +75,24 @@ def _download_data(config: dict) -> Tuple[list, list]:
         if issue_id in all_issues:
             try:
                 all_issues[issue_id]["worklogs"].append(work_item)
-            except ValueError:
+            except (KeyError, ValueError):
                 all_issues[issue_id]["worklogs"] = [work_item]
+
+    # # Download Sprint Metadata
+    # sprints_endpoint = f'{api_url}agiles'
+    # sprints_fields = {"fields": "id,name,projects(shortName)"}
+    # sprints_response = requests.get(sprints_endpoint, headers=auth_header, params=sprints_fields)
+    # sprints_response.raise_for_status()
+    # sprints = sprints_response.json()
+    # # for sprint in sprints:
+    # #     print("\n",sprint,"\n")
+
+    # sprints = [sprint for sprint in sprints for project in sprint["projects"] if "DF" in project["shortName"]]
+    # for sprint in sprints:
+    #     print(sprint)
+
+
+    # exit()
 
     return all_issues
 
@@ -90,31 +107,20 @@ def get_issues(config: dict) -> list:
         list: a list of project issues 
     """
     issue_data_path = get_issue_data_path(config)
-    try:
+    if issue_data_path.is_file and not config["prefer_api"]:
         with open(issue_data_path, 'r') as f:
             all_issues = json.load(f)
         print(f"Issue data successfully loaded from {issue_data_path}")
-    except Exception:
-        print("No local issue data. Attempting Download...")
+    else:
+        print(f"Downloading data...")
         all_issues = _download_data(config)
 
         with open(issue_data_path, 'w') as file:
             json.dump(all_issues, file)
 
         print(f'YouTrack data written to {issue_data_path}')
-    
+
     return all_issues
-
-
-def json_to_file(json_data: list, path: Path) -> None:
-    """ write json data to file
-
-    Args:
-        issues (list): list of youtrack issues
-        path (Path): _description_
-    """
-    with open(path, 'w') as file:
-        json.dump(issues, file)
 
 
 def get_issue_data_path(config: dict) -> Path:

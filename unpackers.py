@@ -71,9 +71,9 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
 
     del issue["links"]
 
-    issue["tags"] = unpack_tags(issue["tags"])
-    issue["comments"] = unpack_comments(issue["comments"])
-    issue["worklogs"] = unpack_worklogs(issue["worklogs"])
+    issue["tags"] = unpack_tags(issue["tags"]) if "tags" in issue else []
+    issue["comments"] = unpack_comments(issue["comments"]) if "comments" in issue else []
+    issue["worklogs"] = unpack_worklogs(issue["worklogs"]) if "worklogs" in issue else []
 
     return issue
 
@@ -284,7 +284,7 @@ def unpack_comments(comments: list) -> list:
         author = comment["author"]["email"] if not comment["author"]["banned"] else None
         unpacked_comments.append(f'{timestamp_to_datetime(comment["created"])}; {author}; {comment["author"]["fullName"]}: {comment["text"]}')
     
-    return unpack_comments
+    return unpacked_comments
 
 
 def timestamp_to_datetime(timestamp: int) -> str:

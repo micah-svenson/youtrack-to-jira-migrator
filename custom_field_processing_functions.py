@@ -262,12 +262,16 @@ def comments(value: Any, *_) -> Tuple:
     Returns:
         Tuple: New key/column names and associated values
     """
-
-    sub_h1 = re.sub("(?m)^#(?!#)", "h1.", value)
-    sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
-    sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
-    sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
-    sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
-    all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
-    return ("comments", all_subs)
+    comments = value if isinstance(value, list) else [value]
+    new_comments = []
+    
+    for comment in comments:
+        sub_h1 = re.sub("(?m)^#(?!#)", "h1.", comment)
+        sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
+        sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
+        sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
+        sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
+        all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
+        new_comments.append(all_subs)
+    return ("comments", [new_comments])
 
