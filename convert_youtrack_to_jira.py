@@ -80,7 +80,7 @@ def main():
 
 
 if __name__ == '__main__':
-    with open("config.yml", "r") as file:
+    with open("youtrack_data_config.yml", "r") as file:
         config = yaml.safe_load(file)
 
     main()

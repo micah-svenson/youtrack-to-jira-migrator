@@ -278,7 +278,12 @@ def unpack_comments(comments: list) -> list:
     Returns:
         list : a list of comments in jira import format
     """
-    return [f'{timestamp_to_datetime(comment["created"])}; {comment["author"]["email"]}; {comment["text"]}' for comment in comments] 
+    unpacked_comments = []
+    for comment in comments:
+        author = comment["author"]["email"] if not comment["author"]["banned"] else None
+        unpacked_comments.append(f'{timestamp_to_datetime(comment["created"])}; {author}; {comment["author"]["fullName"]}: {comment["text"]}')
+    
+    return unpack_comments
 
 
 def timestamp_to_datetime(timestamp: int) -> str:

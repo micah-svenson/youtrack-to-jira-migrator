@@ -45,7 +45,9 @@ issue_fields: >-
   comments(
     text,
     author(
-      email
+      fullName,
+      email,
+      banned
     ),
     created
   ),
