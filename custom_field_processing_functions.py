@@ -64,7 +64,8 @@ def DELETE_IF(get_issue_value: Callable, _: Callable) -> bool:
         bool: Deletes entire issue if True, does nothing if False
     """
     # Delete YouTrack Epics, because they wont be used in Jira as Components and will just take up extra task numbers
-    return True if "Epic" in get_issue_value("Type") else False
+    value = get_issue_value("Type")
+    return True if value != None and "Epic" in value else False
 
 
 def subtask_of(value: Any, get_issue_value: Callable, get_other_issue: Callable) -> Tuple:
@@ -88,6 +89,9 @@ def subtask_of(value: Any, get_issue_value: Callable, get_other_issue: Callable)
     Returns:
         Tuple: New key/column names and associated values
     """
+    if value == None:
+        return ("subtask of", value)
+
     # retrieve Feature summary's to create Epic links in Jira
     try:
         component, epic_link, subtask_of_link = helper_flatten_parent_relationships(value, get_other_issue)
@@ -117,6 +121,9 @@ def helper_flatten_parent_relationships(issue_id: str, get_other_issue: Callable
     new_epic_link = epic_link
     new_subtask_of_link = subtask_of_link
     component = None
+
+    if current_issue["Type"] == None:
+        return (None, None, None)
 
     if "User Story" in current_issue["Type"]:
         new_subtask_of_link = current_issue["idReadable"]
@@ -189,6 +196,8 @@ def Type(value: Any, get_issue_value: Callable, _) -> Tuple:
     Returns:
         Tuple: New key/column names and associated values
     """
+    if value == None:
+        return ("Type", value)
 
     if "Feature" in value:
         # YouTrack features need to be Jira Epics
@@ -225,7 +234,7 @@ def Sprints(value: Any, *_) -> Tuple:
         return ("Sprints", None)
     if not isinstance(value, list):
         value = [value]
-    return ("Sprints", [[int(sprint.split(" ")[-1]) + offset if "Backlog" not in sprint else None for sprint in value]])
+    return ("Sprints", [[int(sprint.split(" ")[-1]) + offset if "Backlog" not in sprint and "Bug Board" not in sprint else None for sprint in value]])
 
 
 def description(value: Any, *_) -> Tuple:
@@ -240,13 +249,14 @@ def description(value: Any, *_) -> Tuple:
     Returns:
         Tuple: New key/column names and associated values
     """
-
-    sub_h1 = re.sub("(?m)^#(?!#)", "h1.", value)
-    sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
-    sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
-    sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
-    sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
-    all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
+    all_subs = None
+    if value != None:
+        sub_h1 = re.sub("(?m)^#(?!#)", "h1.", value)
+        sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
+        sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
+        sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
+        sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
+        all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
     return ("description", all_subs)
 
 

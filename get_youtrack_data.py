@@ -11,6 +11,7 @@ Date Created: 4/25/22
 import re
 import json
 import yaml
+import unpackers 
 import requests
 from typing import Tuple 
 from pathlib import Path
@@ -46,12 +47,12 @@ def _download_data(config: dict) -> Tuple[list, list]:
     # Find Project Id from Project Name
     print("getting youtrack project id...")
     projects_endpoint = f'{api_url}admin/projects'
-    projects_list = requests.get(projects_endpoint, params={"fields": "id,name"}, headers=auth_header)
+    projects_list = requests.get(projects_endpoint, params={"fields": "id,name,shortName"}, headers=auth_header)
 
     try: 
-        project_id = next(filter(lambda x: project_name in x['name'], projects_list.json()))['id']
+        project_id = next(filter(lambda x: project_name in x['shortName'], projects_list.json()))['id']
     except StopIteration:
-        raise ValueError(f"Project {project_name} does not exist")
+        raise ValueError(f"Project {project_name} does not exist. \n Your choices are: {[project['shortName'] for project in projects_list.json()]}")
 
     # Download Issues
     print(f"Requesting {num_issues_to_retrieve} issues from YouTrack starting with Id {num_issues_to_skip+1}...")
@@ -63,11 +64,10 @@ def _download_data(config: dict) -> Tuple[list, list]:
 
     # Download Worklog
     worklog_endpoint = f'{api_url}workItems'
-    work_item_fields = {"fields": requested_work_item_fields, "query": f'project: {project_name}', "$top": -1}
+    work_item_fields = {"fields": requested_work_item_fields, "query": f'project: {{{project_name}}}', "$top": -1}
     work_items_response = requests.get(worklog_endpoint, headers=auth_header, params=work_item_fields)
     work_items_response.raise_for_status()
     all_work_items = work_items_response.json()
-
 
     # Merge worklogs into issues
     for work_item in all_work_items:
@@ -78,23 +78,20 @@ def _download_data(config: dict) -> Tuple[list, list]:
             except (KeyError, ValueError):
                 all_issues[issue_id]["worklogs"] = [work_item]
 
-    # # Download Sprint Metadata
-    # sprints_endpoint = f'{api_url}agiles'
-    # sprints_fields = {"fields": "id,name,projects(shortName)"}
-    # sprints_response = requests.get(sprints_endpoint, headers=auth_header, params=sprints_fields)
-    # sprints_response.raise_for_status()
-    # sprints = sprints_response.json()
-    # # for sprint in sprints:
-    # #     print("\n",sprint,"\n")
+    # Download Sprint Metadata
+    agile_endpoint = f'{api_url}agiles'
+    agile_board_fields = {"fields": "id,name,projects(shortName),sprints(name,goal,start,finish,id)"}
+    agile_boards_response = requests.get(agile_endpoint, headers=auth_header, params=agile_board_fields)
+    agile_boards_response.raise_for_status()
+    agile_boards = agile_boards_response.json()
 
-    # sprints = [sprint for sprint in sprints for project in sprint["projects"] if "DF" in project["shortName"]]
-    # for sprint in sprints:
-    #     print(sprint)
+    agile_boards = [board for board in agile_boards for project in board["projects"] if project_name in project["shortName"]]
+    for board in agile_boards:
+        for sprint in board["sprints"]:
+            sprint["start"] = unpackers.timestamp_to_datetime(sprint["start"]) if sprint["start"] != None else None
+            sprint["finish"] = unpackers.timestamp_to_datetime(sprint["finish"]) if sprint["start"] != None else None
 
-
-    # exit()
-
-    return all_issues
+    return (all_issues, agile_boards)
 
 
 def get_issues(config: dict) -> list:
@@ -106,24 +103,30 @@ def get_issues(config: dict) -> list:
     Returns:
         list: a list of project issues 
     """
-    issue_data_path = get_issue_data_path(config)
+    base_path = get_base_data_path(config)
+    issue_data_path = base_path / f'{config["project_name"]}_youtrack_issues.json'
+
     if issue_data_path.is_file and not config["prefer_api"]:
         with open(issue_data_path, 'r') as f:
             all_issues = json.load(f)
         print(f"Issue data successfully loaded from {issue_data_path}")
     else:
         print(f"Downloading data...")
-        all_issues = _download_data(config)
+        all_issues, sprints = _download_data(config)
 
         with open(issue_data_path, 'w') as file:
             json.dump(all_issues, file)
+
+        sprints_data_path = base_path / f'{config["project_name"]}_youtrack_sprints.json'
+        with open(sprints_data_path, 'w') as file:
+            json.dump(sprints, file)
 
         print(f'YouTrack data written to {issue_data_path}')
 
     return all_issues
 
 
-def get_issue_data_path(config: dict) -> Path:
+def get_base_data_path(config: dict) -> Path:
     """ Get path to issue data from configuration. Creates path if it doesnt already exist
 
     Args:
@@ -134,7 +137,7 @@ def get_issue_data_path(config: dict) -> Path:
     """
     base_file_path = Path(config["data_storage_path"])
     base_file_path.mkdir(parents=True, exist_ok=True)
-    return base_file_path / f'{config["project_name"]}_youtrack_issues.json'
+    return base_file_path
 
 
 if __name__ == "__main__":

@@ -10,16 +10,16 @@
 # Date Created: 4/25/22 
 #
 
-# The name of the project you want to export from YouTrack. This must be an exact match to the YouTrack project name
-project_name: "ATAT"
+# The short name of the project you want to export from YouTrack. i.e. ATAT instead of Advanced Tactics, SWA instead of SSDP Web App, etc. This must be an exact match to the YouTrack project name
+project_name: "SWA"
 # The API url for the Youtrack instance
 api_url: "https://pandatrack.myjetbrains.com/youtrack/api/"
 # Flag to override preference for loading local data
-prefer_api: True
+prefer_api: False
 # Issue Id number to start importing from with the given project.
 start_issue: 1
-# Number of issues to retrieve starting from start_issue. If this value is greater than the number of issues in the project, the API will retrieve all project issues.
-num_issues_to_retrieve: 1000
+# Number of issues to retrieve starting from start_issue. A value of -1 means all issues will be retrieved.
+num_issues_to_retrieve: -1
 # path of youtrack api token
 youtrack_token_path: "./.youtracktoken"
 # directory path for loading and saving data
