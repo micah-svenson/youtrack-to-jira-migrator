@@ -73,6 +73,7 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
 
     issue["tags"] = unpack_tags(issue["tags"])
     issue["comments"] = unpack_comments(issue["comments"])
+    issue["worklogs"] = unpack_worklogs(issue["worklogs"])
 
     return issue
 
