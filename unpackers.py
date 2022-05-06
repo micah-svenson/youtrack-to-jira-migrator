@@ -282,7 +282,7 @@ def unpack_comments(comments: list) -> list:
     unpacked_comments = []
     for comment in comments:
         author = comment["author"]["email"] if not comment["author"]["banned"] else ""
-        unpacked_comments.append(f'{timestamp_to_datetime(comment["created"])}; {author}; {comment["author"]["fullName"]}: {comment["text"]}')
+        unpacked_comments.append(f'{timestamp_to_datetime(comment["created"])}; {author}; {comment["author"]["fullName"]}: \n{comment["text"]}')
     
     return unpacked_comments
 
