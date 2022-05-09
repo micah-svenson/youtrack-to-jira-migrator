@@ -146,5 +146,6 @@ if __name__ == "__main__":
 
     all_issues = _download_data(config)
 
+    #TODO: this is wrong now. Fix it. Incorporate the sprints file as well
     with open(get_base_data_path(config), 'w') as file:
         json.dump(all_issues, file)

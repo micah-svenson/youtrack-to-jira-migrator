@@ -93,7 +93,7 @@ def unpack_worklogs(logs: Any) -> list:
         name = log["creator"]["fullName"]
         worktype = log["type"]["name"] if log["type"] != None and "name" in log["type"] else "No Worktype"
         message = log["text"]
-        entrytime = timestamp_to_datetime(log["date"])
+        entrytime = timestamp_to_datetime(log["date"] + (24 * 3600)*1000)
         user = log["creator"]["email"] if log["creator"]["banned"] is False else ""
         duration = log["duration"]["minutes"]*60
         unpacked_logs.append(f'{name} [{worktype}]: {message};{entrytime};{user};{duration}')
