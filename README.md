@@ -23,6 +23,12 @@ python3 get_youtrack_data.py
 ```
 3. Check to ensure data was downloaded by following the the file path output by the script.
 
+Note: If you would like to download more than one project at a time, passing project keys as command line arguments to the get_youtrack_script.py will override the project name configured in youtrack_data_config.yml and download data for any existing projects.
+```
+# Download data for the ATAT, SWA, and DF projects.
+python3 get_youtrack_data.py ATAT SWA DF
+```
+
 ### If you want to convert YouTrack Data to Jira CSV Data (API and local storage)
 Use the convert_youtrack_to_jira.py script.
 1. Update the configuration in youtrack_data_config.yml. 
@@ -34,6 +40,12 @@ Use the convert_youtrack_to_jira.py script.
 python3 convert_youtrack_to_jira.py
 ```
 3. Check the resulting CSV to ensure requirements are met. 
+
+Note: If you would like to convert more than one project at a time, passing project keys as command line arguments to the convert_youtrack_to_jira.py will override the project name configured in youtrack_data_config.yml and convert data for the selected projects
+```
+# Convert issues for the ATAT, SWA, and DF projects.
+python3 convert_youtrack_to_jira.py ATAT SWA DF
+```
 
 
 ## Importing into JIRA Cloud

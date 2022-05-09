@@ -11,10 +11,12 @@ Date Created: 4/25/22
 import re
 import json
 import yaml
+import argparse
 import unpackers 
 import requests
 from typing import Tuple 
 from pathlib import Path
+from colorama import Fore
 
 
 def get_data_paths(config: dict) -> Path:
@@ -148,16 +150,22 @@ def write_to_file(paths: dict, data: dict) -> None:
                 json.dump(data[index], file)
         except KeyError as e:
             raise ValueError("No matching data for {index} at path {path}")
-        print(f'YouTrack {index} written to {path.absolute()}')
+        print(Fore.GREEN + f'YouTrack {index} written to {path.absolute()}' + Fore.RESET)
             
-
-def get_youtrack_data(config):
-    write_to_file(get_data_paths(config), _download_data(config))
-
 
 if __name__ == "__main__":
     with open("youtrack_data_config.yml", "r") as file:
         config = yaml.safe_load(file)
-
-    get_youtrack_data(config)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('project_names', nargs='*', help="Space separated list of YouTrack project keys to convert")
+    my_args = parser.parse_args()
+    project_names = my_args.project_names if len(my_args.project_names) > 0 else [None]
+    for project in project_names:
+        config["project_name"] = project if project != None else config["project_name"]
+        print(Fore.YELLOW + f'Downloading {config["project_name"]}...' + Fore.RESET)
+        try:
+            write_to_file(get_data_paths(config), _download_data(config))
+        except Exception as e:
+            print(Fore.RED + f'Failed to download {config["project_name"]}: {e}' + Fore.RESET)
+            
 
