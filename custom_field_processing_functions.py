@@ -263,11 +263,27 @@ def comments(value: Any, *_) -> Tuple:
         Tuple: New key/column names and associated values
     """
     comments = value if isinstance(value, list) else [value]
-    new_comments = [markdown_to_markup(comment) for comment in comments]
+    new_comments = [helper_markdown_to_markup(comment) for comment in comments]
     return ("comments", [new_comments])
 
 
-def markdown_to_markup(value: str) -> str:
+def Task_Deliverable_Links(value: Any, *_) -> Tuple:
+    """Convert task deliverable links field into a comment
+
+    Args:
+        value (_type_): The content of the current task deliverable links field
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
+    # Make Task Deliverabe Links field a comment in jira
+    # write result to comments:0 so result doesnt overwrite other functions writing to comments
+    return ("comments:0", f";;Task Deliverable Links:\n{helper_markdown_to_markup(value)}") if value != None else ("comments", None)
+
+
+def helper_markdown_to_markup(value: str) -> str:
     """converts markdown section headers to markup section headers. 
 
         This function only supports converting section headers. It could be extended to convert other syntax if desired.
@@ -285,19 +301,3 @@ def markdown_to_markup(value: str) -> str:
     sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
     all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
     return all_subs
-
-
-def Task_Deliverable_Links(value: Any, *_) -> Tuple:
-    """Convert task deliverable links field into a comment
-
-    Args:
-        value (_type_): The content of the current task deliverable links field
-        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
-        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
-
-    Returns:
-        Tuple: New key/column names and associated values
-    """
-    # Make Task Deliverabe Links field a comment in jira
-    # write result to comments:0 so result doesnt overwrite other functions writing to comments
-    return ("comments:0", f";;Task Deliverable Links:\n{markdown_to_markup(value)}") if value != None else ("comments", None)

@@ -17,6 +17,23 @@ from typing import Tuple
 from pathlib import Path
 
 
+def get_data_paths(config: dict) -> Path:
+    """ Get path to issue data from configuration. Creates path if it doesnt already exist
+
+    Args:
+        config (dict): config from config.yml
+
+    Returns:
+        Path: File paths to youtrack data
+    """
+    base_file_path = Path(config["data_storage_path"])
+    base_file_path.mkdir(parents=True, exist_ok=True)
+    return {
+        "issues": base_file_path / f'{config["project_name"]}_youtrack_issues.json',
+        "sprints": base_file_path / f'{config["project_name"]}_youtrack_sprints.json'
+    }
+
+
 def _download_data(config: dict) -> Tuple[list, list]:
     """Downloads issue and work item data from the YouTrack API
 
@@ -91,7 +108,7 @@ def _download_data(config: dict) -> Tuple[list, list]:
             sprint["start"] = unpackers.timestamp_to_datetime(sprint["start"]) if sprint["start"] != None else None
             sprint["finish"] = unpackers.timestamp_to_datetime(sprint["finish"]) if sprint["start"] != None else None
 
-    return (all_issues, agile_boards)
+    return {"issues": all_issues, "sprints": agile_boards}
 
 
 def get_issues(config: dict) -> list:
@@ -103,49 +120,44 @@ def get_issues(config: dict) -> list:
     Returns:
         list: a list of project issues 
     """
-    base_path = get_base_data_path(config)
-    issue_data_path = base_path / f'{config["project_name"]}_youtrack_issues.json'
+    paths = get_data_paths(config)
 
-    if not config["prefer_api"] and issue_data_path.is_file():
-        with open(issue_data_path, 'r') as f:
+    if not config["prefer_api"] and paths["issues"].is_file():
+        with open(paths["issues"], 'r') as f:
             all_issues = json.load(f)
-        print(f"Issue data successfully loaded from {issue_data_path}")
+        print(f"Issue data successfully loaded from {paths['issues']}")
     else:
         print(f"Downloading data...")
-        all_issues, sprints = _download_data(config)
-
-        with open(issue_data_path, 'w') as file:
-            json.dump(all_issues, file)
-
-        sprints_data_path = base_path / f'{config["project_name"]}_youtrack_sprints.json'
-        with open(sprints_data_path, 'w') as file:
-            json.dump(sprints, file)
-
-        print(f'YouTrack data written to {issue_data_path}')
+        all_data = _download_data(config)
+        write_to_file(paths, all_data)
+        all_issues = all_data["issues"]
 
     return all_issues
 
 
-def get_base_data_path(config: dict) -> Path:
-    """ Get path to issue data from configuration. Creates path if it doesnt already exist
-
+def write_to_file(paths: dict, data: dict) -> None:
+    """write data to files keys in paths and data are expected to match
+       
     Args:
-        config (dict): config from config.yml
-
-    Returns:
-        Path: File path issue data file
+        paths (dict): dict of file paths. expected to match keys of data
+        data (dict): dict of data. expected to match keys of paths
     """
-    base_file_path = Path(config["data_storage_path"])
-    base_file_path.mkdir(parents=True, exist_ok=True)
-    return base_file_path
+    for index, path in paths.items():
+        try:
+            with open(path, 'w') as file:
+                json.dump(data[index], file)
+        except KeyError as e:
+            raise ValueError("No matching data for {index} at path {path}")
+        print(f'YouTrack {index} written to {path.absolute()}')
+            
+
+def get_youtrack_data(config):
+    write_to_file(get_data_paths(config), _download_data(config))
 
 
 if __name__ == "__main__":
-    with open("config.yml", "r") as file:
+    with open("youtrack_data_config.yml", "r") as file:
         config = yaml.safe_load(file)
 
-    all_issues = _download_data(config)
+    get_youtrack_data(config)
 
-    #TODO: this is wrong now. Fix it. Incorporate the sprints file as well
-    with open(get_base_data_path(config), 'w') as file:
-        json.dump(all_issues, file)
