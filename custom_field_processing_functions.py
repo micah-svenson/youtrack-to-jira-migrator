@@ -263,17 +263,28 @@ def comments(value: Any, *_) -> Tuple:
         Tuple: New key/column names and associated values
     """
     comments = value if isinstance(value, list) else [value]
-    new_comments = []
-    
-    for comment in comments:
-        sub_h1 = re.sub("(?m)^#(?!#)", "h1.", comment)
-        sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
-        sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
-        sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
-        sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
-        all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
-        new_comments.append(all_subs)
+    new_comments = [markdown_to_markup(comment) for comment in comments]
     return ("comments", [new_comments])
+
+
+def markdown_to_markup(value: str) -> str:
+    """converts markdown section headers to markup section headers. 
+
+        This function only supports converting section headers. It could be extended to convert other syntax if desired.
+
+    Args:
+        value (str): markdown string
+
+    Returns:
+        str: markup string
+    """
+    sub_h1 = re.sub("(?m)^#(?!#)", "h1.", value)
+    sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
+    sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
+    sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
+    sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
+    all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
+    return all_subs
 
 
 def Task_Deliverable_Links(value: Any, *_) -> Tuple:
@@ -289,4 +300,4 @@ def Task_Deliverable_Links(value: Any, *_) -> Tuple:
     """
     # Make Task Deliverabe Links field a comment in jira
     # write result to comments:0 so result doesnt overwrite other functions writing to comments
-    return ("comments:0", f";;Task Deliverable Links:\n{value}") if value != None else ("comments", None)
+    return ("comments:0", f";;Task Deliverable Links:\n{markdown_to_markup(value)}") if value != None else ("comments", None)
