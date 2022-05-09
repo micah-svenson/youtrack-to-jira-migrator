@@ -16,12 +16,17 @@ Rules:
     * Second tuple value can be a list of data that will be applied to the column name with a matching index
 4. If it is desired to retain original data associated with a key, it is your responsibility to include it in the return tuple of the function
     * The default behavior is to delete the source key/value data in the issue before applying the result of a custom function.
+5. If multiple function update the same field, only the result from the last executed function will be retained.
+    * If it is desired to combine two different results, place a ":0" after the column name of two conflicting functions.
+        * For example: One function converts comment syntax from markdown to markup. Another function takes some issue data and writes a new comment.
+        * The first function should write its result to the "comments" col/field. The second function should write its result to the "comments:0" col/field.
+        * This will ensure that both results show up in the csv under a "comments" column. Note that comments column may not be grouped together.
 
 Examples:
     1. A field called "Task Deliverable Links" needs to be converted into an issue comment
     ```
         def Task_Deliverable_Links(value): 
-            return ("Comments", f"Task Deliverable Links: {value}") if value != None else ("Comments", None)
+            return ("comments", f"Task Deliverable Links: {value}") if value != None else ("comments", None)
     ```
         * function name looks like key/column name except spaces are replaced with underscores
         * function accepts a single "value" argument
@@ -144,21 +149,6 @@ def helper_flatten_parent_relationships(issue_id: str, get_other_issue: Callable
 
     # print(f'do the recursive call: {current_issue["Type"]}')
     return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=new_epic_link, subtask_of_link=new_subtask_of_link)
-
-
-def Task_Deliverable_Links(value: Any, *_) -> Tuple:
-    """Convert task deliverable links field into a comment
-
-    Args:
-        value (_type_): The content of the current task deliverable links field
-        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
-        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
-
-    Returns:
-        Tuple: New key/column names and associated values
-    """
-    # Make Task Deliverabe Links field a comment in jira
-    return ("comments", f";;Task Deliverable Links: {value}") if value != None else ("Comments", None)
 
 
 def Assignees(value: Any, *_) -> Tuple:
@@ -285,3 +275,18 @@ def comments(value: Any, *_) -> Tuple:
         new_comments.append(all_subs)
     return ("comments", [new_comments])
 
+
+def Task_Deliverable_Links(value: Any, *_) -> Tuple:
+    """Convert task deliverable links field into a comment
+
+    Args:
+        value (_type_): The content of the current task deliverable links field
+        get_issue_value (Callable): get another column value in the current issue. i.e. get_issue_value(<key name>)
+        get_other_issue (Callable): get another issue in the available issue set. i.e. get_other_issue(<issue id>)
+
+    Returns:
+        Tuple: New key/column names and associated values
+    """
+    # Make Task Deliverabe Links field a comment in jira
+    # write result to comments:0 so result doesnt overwrite other functions writing to comments
+    return ("comments:0", f";;Task Deliverable Links:\n{value}") if value != None else ("comments", None)

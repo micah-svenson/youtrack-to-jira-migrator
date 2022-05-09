@@ -106,7 +106,7 @@ def get_issues(config: dict) -> list:
     base_path = get_base_data_path(config)
     issue_data_path = base_path / f'{config["project_name"]}_youtrack_issues.json'
 
-    if issue_data_path.is_file and not config["prefer_api"]:
+    if not config["prefer_api"] and issue_data_path.is_file():
         with open(issue_data_path, 'r') as f:
             all_issues = json.load(f)
         print(f"Issue data successfully loaded from {issue_data_path}")
@@ -146,5 +146,5 @@ if __name__ == "__main__":
 
     all_issues = _download_data(config)
 
-    with open(get_issue_data_path(config), 'w') as file:
+    with open(get_base_data_path(config), 'w') as file:
         json.dump(all_issues, file)
