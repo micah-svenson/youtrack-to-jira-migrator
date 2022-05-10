@@ -21,10 +21,10 @@ def flatten_series_to_columns(value: Any, field_name: str) -> pd.Series:
 
     Args:
         value (Any): Any pandas data frame value. Only list like values will get new columns
-        field_name (str): the name of the column 
+        field_name (str): the name of the column
 
     Returns:
-        pd.Series: an name indexed pandas series 
+        pd.Series: an name indexed pandas series
     """
     index_range = 1
 
@@ -53,9 +53,15 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
 
     issue["created"] = timestamp_to_datetime(issue["created"])
     issue["updated"] = timestamp_to_datetime(issue["updated"])
-    issue["resolved"] = timestamp_to_datetime(issue["resolved"]) if issue["resolved"] != None else None
-    issue["reporter"] = issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None
-    issue["updater"] = issue["updater"]["email"] if issue["updater"]["banned"] is False else None
+    issue["resolved"] = (
+        timestamp_to_datetime(issue["resolved"]) if issue["resolved"] != None else None
+    )
+    issue["reporter"] = (
+        issue["reporter"]["email"] if issue["reporter"]["banned"] is False else None
+    )
+    issue["updater"] = (
+        issue["updater"]["email"] if issue["updater"]["banned"] is False else None
+    )
 
     for custom in issue["customFields"]:
         field_name, field_values = unpack_field_value(custom)
@@ -70,8 +76,12 @@ def unpack_youtrack_issue(issue: Dict[str, Any]) -> Dict[str, Any]:
     del issue["links"]
 
     issue["tags"] = unpack_tags(issue["tags"]) if "tags" in issue else []
-    issue["comments"] = unpack_comments(issue["comments"]) if "comments" in issue else []
-    issue["worklogs"] = unpack_worklogs(issue["worklogs"]) if "worklogs" in issue else []
+    issue["comments"] = (
+        unpack_comments(issue["comments"]) if "comments" in issue else []
+    )
+    issue["worklogs"] = (
+        unpack_worklogs(issue["worklogs"]) if "worklogs" in issue else []
+    )
 
     return issue
 
@@ -89,14 +99,20 @@ def unpack_worklogs(logs: Any) -> list:
     unpacked_logs = []
     for log in logs:
         name = log["creator"]["fullName"]
-        worktype = log["type"]["name"] if log["type"] != None and "name" in log["type"] else "No Worktype"
+        worktype = (
+            log["type"]["name"]
+            if log["type"] != None and "name" in log["type"]
+            else "No Worktype"
+        )
         message = log["text"]
-        entrytime = timestamp_to_datetime(log["date"] + (24 * 3600)*1000)
+        entrytime = timestamp_to_datetime(log["date"] + (24 * 3600) * 1000)
         user = log["creator"]["email"] if log["creator"]["banned"] is False else ""
-        duration = log["duration"]["minutes"]*60
-        unpacked_logs.append(f'{name} [{worktype}]: {message};{entrytime};{user};{duration}')
+        duration = log["duration"]["minutes"] * 60
+        unpacked_logs.append(
+            f"{name} [{worktype}]: {message};{entrytime};{user};{duration}"
+        )
 
-    return unpacked_logs 
+    return unpacked_logs
 
 
 def list_custom_funcs() -> list:
@@ -111,7 +127,9 @@ def list_custom_funcs() -> list:
     return [func.name for func in ast_tree.body if isinstance(func, ast.FunctionDef)]
 
 
-def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) -> Dict[str, Any]:
+def apply_custom_field_processors(
+    issue: Dict[str, Any], issue_lookup_map={}
+) -> Dict[str, Any]:
     """apply custom field processing function defined in custom_field_processing_functions.py
 
     Args:
@@ -127,24 +145,28 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
     # define helper functions to pass to custom functions
     def key_filter(key: str) -> bool:
         """filter out custom functions and objects that don't apply to the current processed_issue"""
-        unmangled_key = key.replace('__', '_').replace('_', ' ')
+        unmangled_key = key.replace("__", "_").replace("_", " ")
         return unmangled_key in issue
 
     def get_raw_issue(issue_id, lookup_map={}):
         if issue_id not in lookup_map:
             raise ValueError(f"Issue {issue_id} does not exist in current scope")
         return lookup_map[issue_id]
+
     get_other_issue = functools.partial(get_raw_issue, lookup_map=issue_lookup_map)
 
     def get_value(key, lookup_map={}):
         return lookup_map[key]
+
     get_value_current_issue = functools.partial(get_value, lookup_map=issue)
 
     all_custom_funcs = list_custom_funcs()
 
     # evaluate DELETE_IF if the special custom function has been defined
     if "DELETE_IF" in all_custom_funcs:
-        delete_issue = getattr(custom_field_processing_functions, "DELETE_IF")(get_value_current_issue, get_other_issue)
+        delete_issue = getattr(custom_field_processing_functions, "DELETE_IF")(
+            get_value_current_issue, get_other_issue
+        )
         if delete_issue:
             return None
 
@@ -154,19 +176,25 @@ def apply_custom_field_processors(issue: Dict[str, Any], issue_lookup_map={}) ->
     funcs_to_apply = filter(key_filter, list_custom_funcs())
 
     for func_name in funcs_to_apply:
-        key_name = func_name.replace('__', '_').replace('_', ' ')
-        new_key_names, new_values = getattr(custom_field_processing_functions, func_name)(issue[key_name], get_value_current_issue, get_other_issue)
-        new_key_names = [new_key_names] if not isinstance(new_key_names, list) else new_key_names
+        key_name = func_name.replace("__", "_").replace("_", " ")
+        new_key_names, new_values = getattr(
+            custom_field_processing_functions, func_name
+        )(issue[key_name], get_value_current_issue, get_other_issue)
+        new_key_names = (
+            [new_key_names] if not isinstance(new_key_names, list) else new_key_names
+        )
         new_values = [new_values] if not isinstance(new_values, list) else new_values
 
         if len(new_key_names) != len(new_values):
-            raise Exception(f"Custom field processing functions must return an equal number of keys and values. {func_name} returned {len(new_key_names)} key names and {len(new_values)} values")
+            raise Exception(
+                f"Custom field processing functions must return an equal number of keys and values. {func_name} returned {len(new_key_names)} key names and {len(new_values)} values"
+            )
 
         # delete source data so that the next step can cleanly combine new data going into other pre-existing columns
         del processed_issue[key_name]
 
         for index, key in enumerate(new_key_names):
-            processed_issue[key] = new_values[index] 
+            processed_issue[key] = new_values[index]
 
     return processed_issue
 
@@ -186,49 +214,51 @@ def unpack_field_value(field: dict) -> Tuple[str, Any]:
     field_name = ""
     new_values = []
 
-    if field['value'] == None:
-        field_name = field['name']
+    if field["value"] == None:
+        field_name = field["name"]
         new_values = [None]
 
-    elif field['$type'] == 'SimpleIssueCustomField':
-        field_name = field['name']
-        new_values = [field['value']]
-        
-    elif field['$type'] == 'StateIssueCustomField':
-        field_name = field['name']
-        new_values = [field['value']['name']]
+    elif field["$type"] == "SimpleIssueCustomField":
+        field_name = field["name"]
+        new_values = [field["value"]]
 
-    elif field['$type'] == 'StateMachineIssueCustomField':
-        field_name = field['name']
+    elif field["$type"] == "StateIssueCustomField":
+        field_name = field["name"]
+        new_values = [field["value"]["name"]]
+
+    elif field["$type"] == "StateMachineIssueCustomField":
+        field_name = field["name"]
         if field["value"]["$type"] == "StateBundleElement":
-            new_values = [field['value']['name']]
+            new_values = [field["value"]["name"]]
         else:
-            new_values = [field['value']]
+            new_values = [field["value"]]
 
-    elif field['$type'] == 'TextIssueCustomField':
-        field_name = field['name']
-        new_values = [field['value']['text']]
+    elif field["$type"] == "TextIssueCustomField":
+        field_name = field["name"]
+        new_values = [field["value"]["text"]]
 
-    elif field['$type'] == 'PeriodIssueCustomField':
-        field_name = field['name']
+    elif field["$type"] == "PeriodIssueCustomField":
+        field_name = field["name"]
         # convert to seconds
-        new_values = [field['value']['minutes'] * 60]
+        new_values = [field["value"]["minutes"] * 60]
 
-    elif field['$type'] == 'SingleEnumIssueCustomField':
-        field_name = field['name']
-        new_values = [field['value']['name']]
+    elif field["$type"] == "SingleEnumIssueCustomField":
+        field_name = field["name"]
+        new_values = [field["value"]["name"]]
 
-    elif field['$type'] == 'MultiEnumIssueCustomField':
-        field_name = field['name']
-        new_values = [item['name'] for item in field['value']]
+    elif field["$type"] == "MultiEnumIssueCustomField":
+        field_name = field["name"]
+        new_values = [item["name"] for item in field["value"]]
 
-    elif field['$type'] == 'MultiUserIssueCustomField':
-        field_name = field['name']
-        new_values = [item['email'] for item in field['value'] if item['banned'] is False]
+    elif field["$type"] == "MultiUserIssueCustomField":
+        field_name = field["name"]
+        new_values = [
+            item["email"] for item in field["value"] if item["banned"] is False
+        ]
 
-    elif field['$type'] == 'MultiVersionIssueCustomField':
-        field_name = field['name']
-        new_values = [item['name'] for item in field['value']]
+    elif field["$type"] == "MultiVersionIssueCustomField":
+        field_name = field["name"]
+        new_values = [item["name"] for item in field["value"]]
 
     else:
         raise NotImplementedError(f'Dont know how to handle {field["$type"]}')
@@ -249,7 +279,7 @@ def unpack_link_group(link_group: dict) -> Tuple[str, Any]:
         link_group (dict): a youtrack link group response object
 
     Returns:
-        Tuple[str, list]: first value is link type, second value is list of issue ids associated with current issue via link type 
+        Tuple[str, list]: first value is link type, second value is list of issue ids associated with current issue via link type
     """
 
     links = [linked_issue["idReadable"] for linked_issue in link_group["issues"]]
@@ -258,11 +288,13 @@ def unpack_link_group(link_group: dict) -> Tuple[str, Any]:
     if len(links) == 0:
         links = None
     elif len(links) == 1:
-        links = links[0] 
+        links = links[0]
 
     return (
-        link_group["linkType"]["targetToSource"] if "INWARD" in link_group["direction"] else link_group["linkType"]["sourceToTarget"],
-        links
+        link_group["linkType"]["targetToSource"]
+        if "INWARD" in link_group["direction"]
+        else link_group["linkType"]["sourceToTarget"],
+        links,
     )
 
 
@@ -280,8 +312,10 @@ def unpack_comments(comments: list) -> list:
     unpacked_comments = []
     for comment in comments:
         author = comment["author"]["email"] if not comment["author"]["banned"] else ""
-        unpacked_comments.append(f'{timestamp_to_datetime(comment["created"])}; {author}; {comment["author"]["fullName"]}: \n{comment["text"]}')
-    
+        unpacked_comments.append(
+            f'{timestamp_to_datetime(comment["created"])}; {author}; {comment["author"]["fullName"]}: \n{comment["text"]}'
+        )
+
     return unpacked_comments
 
 
@@ -294,7 +328,9 @@ def timestamp_to_datetime(timestamp: int) -> str:
     Returns:
         str : a formatted datetime string
     """
-    return datetime.datetime.fromtimestamp(int(timestamp/1000)).strftime('%m/%d/%Y %H:%M:%S')
+    return datetime.datetime.fromtimestamp(int(timestamp / 1000)).strftime(
+        "%m/%d/%Y %H:%M:%S"
+    )
 
 
 def unpack_tags(tags: list) -> list:
@@ -306,4 +342,4 @@ def unpack_tags(tags: list) -> list:
     Returns:
         list : a list of tag names
     """
-    return [tag['name'].replace(" ", "-") for tag in tags]
+    return [tag["name"].replace(" ", "-") for tag in tags]

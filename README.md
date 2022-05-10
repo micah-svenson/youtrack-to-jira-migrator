@@ -1,8 +1,8 @@
 # YouTrack to Jira Migrator
 
-This package pulls issue data per project from the YouTrack API and transforms it into a CSV importable by the Jira CSV import tool.
+This tool pulls issue data per project from the YouTrack API and transforms it into a CSV importable by the Jira CSV import tool.
 
-The package also optionally will pull raw YouTrack JSON data from a local file
+The tool also optionally will pull raw YouTrack JSON data from a local file
 
 ## Setup
 
@@ -68,7 +68,7 @@ Before completing the import process, several items will need to be completed th
 2. Estimation and Time Spent fields do not parse correctly, unless a nice even number is the first to be parsed. An issue with an estimation and time spent of 3600 seconds, placed at the very top of the csv resolves this issues (no idea why or how).
     * Note: If importing worklogs, do not map the Time Spent field or it will result in doubling time spent, since Jira also sums up all worklogs and adds them to the time spent field.
 
-3. Jira requires that the date format is provided so that it knows how the dates that are passed in are configured. “MM/dd/yyyy hh:mm” should be used as the time format despite excel showing “MM/dd/yyy hh:mm:ss a”. 
+3. Jira requires that the date format is provided so that it knows how the dates that are passed in are configured. “MM/dd/yyyy hh:mm” should be used as the time format despite excel showing “MM/dd/yyy hh:mm:ss a”.
 
 4. When importing do not check the "map field value" box for the description field. Checking this box corrupts formatting.
 

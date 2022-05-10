@@ -73,8 +73,10 @@ def DELETE_IF(get_issue_value: Callable, _: Callable) -> bool:
     return True if value != None and "Epic" in value else False
 
 
-def subtask_of(value: Any, get_issue_value: Callable, get_other_issue: Callable) -> Tuple:
-    """ Traverse issue parent relationships and to map YouTrack Hierarchy to Jira Hierarchy
+def subtask_of(
+    value: Any, get_issue_value: Callable, get_other_issue: Callable
+) -> Tuple:
+    """Traverse issue parent relationships and to map YouTrack Hierarchy to Jira Hierarchy
         YouTrack to Jira Mappings
         1. Epic -> Component
             * Jira csv import requires component to be its own column and requires a Name, not an Id. YouTrack Epic summary is mapped to Jira Component column.
@@ -100,18 +102,30 @@ def subtask_of(value: Any, get_issue_value: Callable, get_other_issue: Callable)
 
     # retrieve Feature summary's to create Epic links in Jira
     try:
-        component, epic_link, subtask_of_link = helper_flatten_parent_relationships(value, get_other_issue)
+        component, epic_link, subtask_of_link = helper_flatten_parent_relationships(
+            value, get_other_issue
+        )
         # print(f"successful link: {epic_link}")
     except Exception as e:
         if value != None:
-            print(f"Warning: Failed to traverse relationships for {get_issue_value('idReadable')}: {e}")
+            print(
+                f"Warning: Failed to traverse relationships for {get_issue_value('idReadable')}: {e}"
+            )
         component, epic_link, subtask_of_link = (None, None, None)
-               
-    return (["Component", "Epic Link", "youtrack subtask of", "subtask of"], [component, epic_link, subtask_of_link, value])
+
+    return (
+        ["Component", "Epic Link", "youtrack subtask of", "subtask of"],
+        [component, epic_link, subtask_of_link, value],
+    )
 
 
-def helper_flatten_parent_relationships(issue_id: str, get_other_issue: Callable, epic_link: str=None, subtask_of_link: str=None) -> Tuple:
-    """ Helper function that recursively searches through all parent relationships of the current issue
+def helper_flatten_parent_relationships(
+    issue_id: str,
+    get_other_issue: Callable,
+    epic_link: str = None,
+    subtask_of_link: str = None,
+) -> Tuple:
+    """Helper function that recursively searches through all parent relationships of the current issue
 
     Args:
         issue_id (str): Id of a parent issue
@@ -134,22 +148,32 @@ def helper_flatten_parent_relationships(issue_id: str, get_other_issue: Callable
     if "User Story" in current_issue["Type"]:
         new_subtask_of_link = current_issue["idReadable"]
 
-    # add "Epic Link" on the way up the hierarchy 
+    # add "Epic Link" on the way up the hierarchy
     if "Feature" in current_issue["Type"]:
         # return summary to add to the "Epic Link" column
         new_epic_link = current_issue["summary"]
 
     # Base case. No level higher than a YT Epic
-    if "Epic" in current_issue["Type"]:# or "Component" in current_issue["Type"]:
+    if "Epic" in current_issue["Type"]:  # or "Component" in current_issue["Type"]:
         component = current_issue["summary"]
         return (component, new_epic_link, new_subtask_of_link)
 
     # Edge cases
-    if any(["subtask of" not in current_issue, "subtask of" in current_issue and current_issue["subtask of"] == None]):
+    if any(
+        [
+            "subtask of" not in current_issue,
+            "subtask of" in current_issue and current_issue["subtask of"] == None,
+        ]
+    ):
         return (component, new_epic_link, new_subtask_of_link)
 
     # print(f'do the recursive call: {current_issue["Type"]}')
-    return helper_flatten_parent_relationships(current_issue["subtask of"], get_other_issue, epic_link=new_epic_link, subtask_of_link=new_subtask_of_link)
+    return helper_flatten_parent_relationships(
+        current_issue["subtask of"],
+        get_other_issue,
+        epic_link=new_epic_link,
+        subtask_of_link=new_subtask_of_link,
+    )
 
 
 def Assignees(value: Any, *_) -> Tuple:
@@ -173,7 +197,7 @@ def Assignees(value: Any, *_) -> Tuple:
 
 
 def Type(value: Any, get_issue_value: Callable, _) -> Tuple:
-    """ Map issue types from Youtrack types to Jira Types. This is Fairly ATAT specific.
+    """Map issue types from Youtrack types to Jira Types. This is Fairly ATAT specific.
         YouTrack to Jira Mappings:
         1. Epic -> Component
         2. Feature -> Epic
@@ -204,7 +228,7 @@ def Type(value: Any, get_issue_value: Callable, _) -> Tuple:
 
 
 def Sprints(value: Any, *_) -> Tuple:
-    """Convert Sprint names into Sprint Id's for the Jira import tool. Because Jira, there is an Id offset that will need to be manually set based on when you created sprints in Jira. 
+    """Convert Sprint names into Sprint Id's for the Jira import tool. Because Jira, there is an Id offset that will need to be manually set based on when you created sprints in Jira.
         Note: For this to work, All sprints referenced in the YouTrack Issue set must be manually created in Jira IN SEQUENCE so that the Id's in the CSV import match.
 
     Args:
@@ -226,7 +250,17 @@ def Sprints(value: Any, *_) -> Tuple:
         return ("Sprints", None)
     if not isinstance(value, list):
         value = [value]
-    return ("Sprints", [[int(sprint.split(" ")[-1]) + offset if "Backlog" not in sprint and "Bug Board" not in sprint else None for sprint in value]])
+    return (
+        "Sprints",
+        [
+            [
+                int(sprint.split(" ")[-1]) + offset
+                if "Backlog" not in sprint and "Bug Board" not in sprint
+                else None
+                for sprint in value
+            ]
+        ],
+    )
 
 
 def description(value: Any, *_) -> Tuple:
@@ -276,11 +310,15 @@ def Task_Deliverable_Links(value: Any, *_) -> Tuple:
     """
     # Make Task Deliverabe Links field a comment in jira
     # write result to comments:0 so result doesnt overwrite other functions writing to comments
-    return ("comments:0", f";;Task Deliverable Links:\n{helper_markdown_to_markup(value)}") if value != None else ("comments", None)
+    return (
+        ("comments:0", f"Task Deliverable Links:\n{helper_markdown_to_markup(value)}")
+        if value != None
+        else ("comments", None)
+    )
 
 
 def helper_markdown_to_markup(value: str) -> str:
-    """converts markdown section headers to markup section headers. 
+    """converts markdown section headers to markup section headers.
 
         This function only supports converting section headers. It could be extended to convert other syntax if desired.
 
