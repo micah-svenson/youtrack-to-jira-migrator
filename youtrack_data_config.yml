@@ -21,7 +21,7 @@ save_attachments: True
 # Issue Id number to start importing from with the given project.
 start_issue: 1
 # Number of issues to retrieve starting from start_issue. A value of -1 means all issues will be retrieved.
-num_issues_to_retrieve: 1000
+num_issues_to_retrieve: -1
 # path of youtrack api token
 youtrack_token_path: "./.youtracktoken"
 # directory path for loading and saving data

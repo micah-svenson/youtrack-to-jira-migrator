@@ -94,6 +94,7 @@ def subtask_of(value: Any, get_issue_value: Callable, get_other_issue: Callable)
     Returns:
         Tuple: New key/column names and associated values
     """
+
     if value == None:
         return ("subtask of", value)
 
@@ -162,6 +163,7 @@ def Assignees(value: Any, *_) -> Tuple:
     Returns:
         Tuple: New key/column names and associated values
     """
+
     if value != None and isinstance(value, list) and len(value) > 1:
         # Overflow multiple assignees into swarmers
         return (["Assignees", "Swarmers"], [value[0], value[1:]])
@@ -186,19 +188,20 @@ def Type(value: Any, get_issue_value: Callable, _) -> Tuple:
     Returns:
         Tuple: New key/column names and associated values
     """
+
     if value == None:
         return ("Type", value)
 
     if "Feature" in value:
-        # YouTrack features need to be Jira Epics
+        # Update features to Epics. Jira CSV requires Epics to have an "Epic Name"
         return (["Type", "Epic Name"], ["Epic", get_issue_value("summary")])
     elif "Epic" in value:
+        # update Epic's to be components
         return ("Type", "Component")
-        # YouTrack epics are components in Jira
-        # return (["Type", "Component"], ["Component", get_issue_value("summary")])
     else:
         # Dont do anything for other task types
         return ("Type", value)
+
 
 def Sprints(value: Any, *_) -> Tuple:
     """Convert Sprint names into Sprint Id's for the Jira import tool. Because Jira, there is an Id offset that will need to be manually set based on when you created sprints in Jira. 
@@ -215,7 +218,6 @@ def Sprints(value: Any, *_) -> Tuple:
 
     # Jira only takes numbers for sprint ids
     # assign Backlog None
-
     # Jira uses internal Id's to map sprints via the csv importer for some unknowable reason.
     # This offset is intended to align the internal jiraId with ATAT sprint numbers.
     # Note: prequisite is that All desired sprints have been manually created in Jira and that all internal Jira Id's are sequential
@@ -239,15 +241,9 @@ def description(value: Any, *_) -> Tuple:
     Returns:
         Tuple: New key/column names and associated values
     """
-    all_subs = None
-    if value != None:
-        sub_h1 = re.sub("(?m)^#(?!#)", "h1.", value)
-        sub_h2 = re.sub("(?m)^#{2}(?!#)", "h2.", sub_h1)
-        sub_h3 = re.sub("(?m)^#{3}(?!#)", "h3.", sub_h2)
-        sub_h4 = re.sub("(?m)^#{4}(?!#)", "h4.", sub_h3)
-        sub_h5 = re.sub("(?m)^#{5}(?!#)", "h5.", sub_h4)
-        all_subs = re.sub("(?m)^#{6}(?!#)", "h6.", sub_h5)
-    return ("description", all_subs)
+
+    markup_description = helper_markdown_to_markup(value) if value != None else None
+    return ("description", markup_description)
 
 
 def comments(value: Any, *_) -> Tuple:

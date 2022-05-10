@@ -22,38 +22,40 @@ from pathlib import Path
 from colorama import Fore
 
 
-def get_data_paths(config: dict) -> Path:
+def get_data_paths(config: dict) -> dict:
     """ Get path to issue data from configuration. Creates path if it doesnt already exist
 
     Args:
-        config (dict): config from config.yml
+        config (dict): config from youtrack_data_config.yml
 
     Returns:
-        Path: File paths to youtrack data
+        dict: File paths to youtrack data
     """
     base_file_path = Path(config["data_storage_path"])
     base_file_path.mkdir(parents=True, exist_ok=True)
+    project_file_path = base_file_path / config["project_name"]
+    project_file_path.mkdir(parents=True, exist_ok=True)
     return {
-        "base_path": base_file_path,
-        "issues": base_file_path / config["project_name"] / f'{config["project_name"]}_youtrack_issues.json',
-        "sprints": base_file_path / config["project_name"] / f'{config["project_name"]}_youtrack_sprints.json',
-        "project": base_file_path / config["project_name"] / f'{config["project_name"]}_youtrack_project.json'
+        "project_path": project_file_path,
+        "issues": project_file_path / f'{config["project_name"]}_youtrack_issues.json',
+        "sprints": project_file_path / f'{config["project_name"]}_youtrack_sprints.json',
+        "project": project_file_path / f'{config["project_name"]}_youtrack_project.json'
     }
 
 
-def _download_data(config: dict) -> Tuple[list, list]:
-    """Downloads issue and work item data from the YouTrack API
+def _download_data(config: dict) -> dict:
+    """Download YouTrack data
 
     Args:
-        config (dict): configuration options from config.yml
+        config (dict): configuration values from youtrack_data_config.yml
 
     Raises:
-        ValueError: _description_
+        ValueError: if api call fails to retrieve data
 
     Returns:
-        Tuple[list, list]: _description_
+        dict: all youtrack data
     """
-
+    
     # load youtrack token
     yt_token_path = Path(config["youtrack_token_path"])
     with open(yt_token_path) as file:
@@ -86,7 +88,7 @@ def _download_data(config: dict) -> Tuple[list, list]:
     issues_response.raise_for_status()
     all_issues = {issue["idReadable"]: issue for issue in issues_response.json()}
 
-    if config["save_attachments"]:
+    if "save_attachments" in config and config["save_attachments"]:
         # Download Issue Attachments
         print("Gathering issue attachments...(this might take a while)")
         all_attachment_ids = []
@@ -99,8 +101,8 @@ def _download_data(config: dict) -> Tuple[list, list]:
                 attachment["issue_id"] = issue_id
                 all_attachment_ids.append(attachment)
 
-        def download_attachments(attachment, base_path):
-            issue_file_path = base_path / "attachments" / attachment["issue_id"]
+        def download_attachments(attachment, project_path):
+            issue_file_path = project_path / "attachments" / attachment["issue_id"]
             issue_file_path.mkdir(parents=True, exist_ok=True)
             file_path = issue_file_path / attachment["name"]
             final_url = "https://pandatrack.myjetbrains.com" + attachment["url"] 
@@ -110,7 +112,7 @@ def _download_data(config: dict) -> Tuple[list, list]:
             file_path.write_bytes(response.content)
         
         paths = get_data_paths(config)
-        download_attachments_partial = partial(download_attachments, base_path=paths["base_path"])
+        download_attachments_partial = partial(download_attachments, project_path=paths["project_path"])
 
         print("Downloading issue attachments...")
         with ThreadPoolExecutor() as executor:
@@ -179,22 +181,30 @@ def write_to_file(paths: dict, data: dict) -> None:
         paths (dict): dict of file paths. expected to match keys of data
         data (dict): dict of data. expected to match keys of paths
     """
+
     for index, path in paths.items():
         try:
             with open(path, 'w') as file:
                 json.dump(data[index], file)
         except KeyError as e:
             raise ValueError("No matching data for {index} at path {path}")
+        except IsADirectoryError:
+            continue
         print(Fore.GREEN + f'YouTrack {index} written to {path.absolute()}' + Fore.RESET)
             
 
 if __name__ == "__main__":
+    # config
     with open("youtrack_data_config.yml", "r") as file:
         config = yaml.safe_load(file)
+
+    # cli arg parsing
     parser = argparse.ArgumentParser()
     parser.add_argument('project_names', nargs='*', help="Space separated list of YouTrack project keys to convert")
     my_args = parser.parse_args()
     project_names = my_args.project_names if len(my_args.project_names) > 0 else [None]
+
+    # execute
     for project in project_names:
         config["project_name"] = project if project != None else config["project_name"]
         print(Fore.YELLOW + f'Downloading {config["project_name"]}...' + Fore.RESET)

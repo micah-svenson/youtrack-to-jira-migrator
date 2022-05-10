@@ -1,0 +1,212 @@
+{
+  "config.version" : "2.0",
+  "config.project.from.csv" : "false",
+  "config.encoding" : "UTF-8",
+  "config.file.id" : "1c0bd4d6-97f9-4fa1-a311-4522e9e23461",
+  "config.email.suffix" : "@",
+  "config.file.name" : "ATAT_jira_issues.csv",
+  "config.field.mappings" : {
+    "Sprints" : {
+      "userChanged" : "false",
+      "manualMapping" : "true",
+      "existing.custom.field" : "10020"
+    },
+    "relates to" : {
+      "link.type" : "10003",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "Swarmers" : {
+      "userChanged" : "false",
+      "manualMapping" : "false",
+      "existing.custom.field" : "10043"
+    },
+    "description" : {
+      "jira.field" : "description",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "Epic Link" : {
+      "userChanged" : "false",
+      "manualMapping" : "false",
+      "existing.custom.field" : "10014"
+    },
+    "Assignees" : {
+      "jira.field" : "assignee",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "Component" : {
+      "jira.field" : "components",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "resolved" : {
+      "jira.field" : "resolutiondate",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "summary" : {
+      "jira.field" : "summary",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "duplicates" : {
+      "link.type" : "10002",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "clones" : {
+      "link.type" : "10001",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "created" : {
+      "jira.field" : "created",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "Priority" : {
+      "jira.field" : "priority",
+      "userChanged" : "false",
+      "manualMapping" : "true"
+    },
+    "Estimation" : {
+      "jira.field" : "timeoriginalestimate",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "reporter" : {
+      "jira.field" : "reporter",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "is required for" : {
+      "link.type" : "10000",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "Evaluator" : {
+      "userChanged" : "false",
+      "manualMapping" : "false",
+      "existing.custom.field" : "10045"
+    },
+    "idReadable" : {
+      "jira.field" : "issuekey",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "tags" : {
+      "jira.field" : "labels",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "Type" : {
+      "jira.field" : "issuetype",
+      "userChanged" : "false",
+      "manualMapping" : "true"
+    },
+    "State" : {
+      "jira.field" : "status",
+      "userChanged" : "false",
+      "manualMapping" : "true"
+    },
+    "updated" : {
+      "jira.field" : "updated",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "youtrack subtask of" : {
+      "link.type" : "10007",
+      "userChanged" : "false",
+      "manualMapping" : "false"
+    },
+    "Epic Name" : {
+      "userChanged" : "false",
+      "manualMapping" : "false",
+      "existing.custom.field" : "10011"
+    },
+    "Story Points" : {
+      "userChanged" : "false",
+      "manualMapping" : "false",
+      "existing.custom.field" : "10029"
+    }
+  },
+  "config.csv.file.id" : null,
+  "config.value.mappings" : {
+    "Sprints" : {
+      "22" : "22",
+      "44" : "44",
+      "45" : "45",
+      "23" : "23",
+      "46" : "46",
+      "24" : "24",
+      "25" : "25",
+      "26" : "26",
+      "27" : "27",
+      "28" : "28",
+      "29" : "29",
+      "30" : "30",
+      "31" : "31",
+      "10" : "10",
+      "32" : "32",
+      "11" : "11",
+      "33" : "33",
+      "34" : "34",
+      "12" : "12",
+      "35" : "35",
+      "13" : "13",
+      "14" : "14",
+      "36" : "36",
+      "37" : "37",
+      "15" : "15",
+      "16" : "16",
+      "38" : "38",
+      "17" : "17",
+      "39" : "39",
+      "18" : "18",
+      "19" : "19",
+      "8" : "8",
+      "9" : "9",
+      "40" : "40",
+      "41" : "41",
+      "20" : "20",
+      "42" : "42",
+      "21" : "21",
+      "43" : "43"
+    },
+    "Type" : {
+      "Spike" : "10025",
+      "User Story" : "10007",
+      "TODO" : "10026",
+      "Task" : "10018",
+      "Epic" : "10000",
+      "Bug" : "10020"
+    },
+    "State" : {
+      "Evaluation" : "10017",
+      "Done" : "10015",
+      "Duplicate" : "10018",
+      "In Progress" : "3",
+      "Hell" : "10018",
+      "Open" : "10014"
+    },
+    "Priority" : {
+      "High" : "2",
+      "Low" : "4",
+      "Medium" : "3",
+      "Lowest" : "5",
+      "Highest" : "1"
+    }
+  },
+  "config.delimiter" : ",",
+  "config.project" : {
+    "project.type" : null,
+    "project.key" : "ATAT",
+    "project.description" : null,
+    "project.url" : null,
+    "project.name" : "ATAT",
+    "project.lead" : null
+  },
+  "config.date.format" : "MM/dd/yyyy hh:mm"
+}

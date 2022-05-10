@@ -23,12 +23,12 @@ from get_youtrack_data import get_issues
 def dataframe_to_csv(issues_dataframe: pd.DataFrame, config: dict) -> None:
     """Convert a pandas dataframe with mangled column names to csv with clean column names
 
-    Args
+    Args:
         issues_dataframe (pd.DataFrame): a dataframe of processed Jira Issues
         config (dict): project configuration
     """
     data_storage_path = Path(config["data_storage_path"])
-    final_csv_path = data_storage_path / f'{config["project_name"]}_jira_issues.csv'
+    final_csv_path = data_storage_path / config["project_name"] / f'{config["project_name"]}_jira_issues.csv'
     data_string= issues_dataframe.to_csv()
     temp_csv = StringIO(data_string)
 
@@ -47,6 +47,9 @@ def dataframe_to_csv(issues_dataframe: pd.DataFrame, config: dict) -> None:
 def main(config):
     """
     Convert YouTrack issues to Jira issues and write csv
+
+    Args:
+        config (dict): configuration options from youtrack_data_config.yml
     """
 
     print("Converting YouTrack Issues to Jira Issues...")
@@ -82,12 +85,17 @@ def main(config):
 
 
 if __name__ == '__main__':
+    # config
     with open("youtrack_data_config.yml", "r") as file:
         config = yaml.safe_load(file)
+
+    # cli arg parsing
     parser = argparse.ArgumentParser()
     parser.add_argument('project_names', nargs='*', help="Space separated list of YouTrack project keys to convert")
     my_args = parser.parse_args()
     project_names = my_args.project_names if len(my_args.project_names) > 0 else [None]
+
+    # execute
     for project in project_names:
         config["project_name"] = project if project != None else config["project_name"]
         print(Fore.YELLOW + f'Converting {config["project_name"]}...' + Fore.RESET)
