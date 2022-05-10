@@ -49,12 +49,34 @@ python3 convert_youtrack_to_jira.py ATAT SWA DF
 
 
 ## Importing into JIRA Cloud
-This tool was specifically created to work with the Jira CSV importer accessible from System Settings. Only Jira Admins will have access to this tool.
+This tool was specifically created to work with the Jira CSV importer accessible from System Settings. Only Jira Admins will have access to this tool. 
 
-Before completing the import process, several items will need to be completed through the Jira due to limitations of the importer and/or Jira API.
+Two Jira CSV import configuration templates are provided with this project to get started with the import process. These templates should not be expected to fit every project perfectly and should instead be used as a starting point. It is recommended that customized CSV import configurations be saved along with the resulting CSV for easy reproducibility if bugs are found in the import. 
 
-### Sprints
-If importing sprints is desired, all sprints must be created manually via the Jira UI first. All of these sprints must also be created sequentially for a given project such that an Id offset can be defined to align YouTrack Sprints with internal Jira Sprint Ids.
+### Manual steps and bugs to watch out for
+Before completing the import process, several items will need to be completed through the Jira due to limitations of the importer and/or Jira API. Below is a list of items to keep in mind when importing issues.
 
-### Jira Mapping Configuration
-TODO: add to this. also commit an example csv import configuration file if possible
+1. If an issue is a child of an Epic, but was created before the Epic, the csv import needs to be re-run to establish those links.
+    * Do not re-import worklogs or comments or else they will be re-posted on each task.
+
+2. Estimation and Time Spent fields do not parse correctly, unless a nice even number is the first to be parsed. An issue with an estimation and time spent of 3600 seconds, placed at the very top of the csv resolves this issues (no idea why or how).
+    * Note: If importing worklogs, do not map the Time Spent field or it will result in doubling time spent, since Jira also sums up all worklogs and adds them to the time spent field.
+
+3. Jira requires that the date format is provided so that it knows how the dates that are passed in are configured. “MM/dd/yyyy hh:mm” should be used as the time format despite excel showing “MM/dd/yyy hh:mm:ss a”. 
+
+4. When importing do not check the "map field value" box for the description field. Checking this box corrupts formatting.
+
+5. All users need to be un-banned from Jira if attempting to import information relating to them  
+
+6. If importing sprints is desired, all sprints must be created manually via the Jira UI first. All of these sprints must also be created sequentially for a given project such that an Id offset can be defined to align YouTrack Sprints with internal Jira Sprint Ids.
+    * Both the get_youtrack_data.py and convert_youtrack_to_jira.py script will download a json file contain sprint information for a project. Use this file to populate the sprints in Jira including names, start and end dates, and sprint goals.
+
+### Limitations
+
+1. The Jira import tool only recognizes atlassians markup syntax for descriptions, comments, etc. To alleviate this in a short amount of time, only section headers are converted from markdown to markup syntax. This was enough to make most description readable. There was no additional effort put towards converting other syntax elements.
+
+2. Tags/labels cannot have spaces in Jira so all spaces in tags were replaced with dashes (-)
+
+3. Because of the way the import tool handles sprints, its difficult to map values from YouTrack across to Jira. see steps in the section above to fix this.
+
+4. If an YouTrack Issue type is mapped to Jira component, the description will not be carried over.
