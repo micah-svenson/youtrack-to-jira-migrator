@@ -13,7 +13,10 @@ import json
 import yaml
 import argparse
 import unpackers 
+import traceback
 import requests
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor
 from typing import Tuple 
 from pathlib import Path
 from colorama import Fore
@@ -31,8 +34,10 @@ def get_data_paths(config: dict) -> Path:
     base_file_path = Path(config["data_storage_path"])
     base_file_path.mkdir(parents=True, exist_ok=True)
     return {
-        "issues": base_file_path / f'{config["project_name"]}_youtrack_issues.json',
-        "sprints": base_file_path / f'{config["project_name"]}_youtrack_sprints.json'
+        "base_path": base_file_path,
+        "issues": base_file_path / config["project_name"] / f'{config["project_name"]}_youtrack_issues.json',
+        "sprints": base_file_path / config["project_name"] / f'{config["project_name"]}_youtrack_sprints.json',
+        "project": base_file_path / config["project_name"] / f'{config["project_name"]}_youtrack_project.json'
     }
 
 
@@ -66,21 +71,51 @@ def _download_data(config: dict) -> Tuple[list, list]:
     # Find Project Id from Project Name
     print("getting youtrack project id...")
     projects_endpoint = f'{api_url}admin/projects'
-    projects_list = requests.get(projects_endpoint, params={"fields": "id,name,shortName"}, headers=auth_header)
+    projects_list = requests.get(projects_endpoint, params={"fields": "id,name,shortName,description,leader(fullName),createdBy(fullName)"}, headers=auth_header)
 
     try: 
-        project_id = next(filter(lambda x: project_name in x['shortName'], projects_list.json()))['id']
+        selected_project = next(filter(lambda x: project_name in x['shortName'], projects_list.json()))
     except StopIteration:
         raise ValueError(f"Project {project_name} does not exist. \n Your choices are: {[project['shortName'] for project in projects_list.json()]}")
 
     # Download Issues
     print(f"Requesting {num_issues_to_retrieve} issues from YouTrack starting with Id {num_issues_to_skip+1}...")
     issues_list_fields = {"fields": requested_issue_fields, "$skip": num_issues_to_skip, "$top": num_issues_to_retrieve}
-    issues_endpoint = f'{projects_endpoint}/{project_id}/issues'
+    issues_endpoint = f'{projects_endpoint}/{selected_project["id"]}/issues'
     issues_response = requests.get(issues_endpoint, params=issues_list_fields, headers=auth_header)
     issues_response.raise_for_status()
     all_issues = {issue["idReadable"]: issue for issue in issues_response.json()}
 
+    if config["save_attachments"]:
+        # Download Issue Attachments
+        print("Gathering issue attachments...(this might take a while)")
+        all_attachment_ids = []
+        for issue_id in all_issues:
+            attachments_fields = {"fields": "name,mimeType,extension,url", "$top": -1}
+            attachments_endpoint = f'{api_url}issues/{all_issues[issue_id]["id"]}/attachments'
+            attachments_response = requests.get(attachments_endpoint, params=attachments_fields, headers=auth_header)
+            attachments_response.raise_for_status()
+            for attachment in attachments_response.json():
+                attachment["issue_id"] = issue_id
+                all_attachment_ids.append(attachment)
+
+        def download_attachments(attachment, base_path):
+            issue_file_path = base_path / "attachments" / attachment["issue_id"]
+            issue_file_path.mkdir(parents=True, exist_ok=True)
+            file_path = issue_file_path / attachment["name"]
+            final_url = "https://pandatrack.myjetbrains.com" + attachment["url"] 
+            response = requests.get(final_url, headers={"Cache-Control": "no-cache"})
+            response.raise_for_status()
+            print(f'Saving {attachment["name"]}')
+            file_path.write_bytes(response.content)
+        
+        paths = get_data_paths(config)
+        download_attachments_partial = partial(download_attachments, base_path=paths["base_path"])
+
+        print("Downloading issue attachments...")
+        with ThreadPoolExecutor() as executor:
+            executor.map(download_attachments_partial, all_attachment_ids)
+        
     # Download Worklog
     worklog_endpoint = f'{api_url}workItems'
     work_item_fields = {"fields": requested_work_item_fields, "query": f'project: {{{project_name}}}', "$top": -1}
@@ -110,7 +145,7 @@ def _download_data(config: dict) -> Tuple[list, list]:
             sprint["start"] = unpackers.timestamp_to_datetime(sprint["start"]) if sprint["start"] != None else None
             sprint["finish"] = unpackers.timestamp_to_datetime(sprint["finish"]) if sprint["start"] != None else None
 
-    return {"issues": all_issues, "sprints": agile_boards}
+    return {"issues": all_issues, "sprints": agile_boards, "project": selected_project}
 
 
 def get_issues(config: dict) -> list:
@@ -166,6 +201,7 @@ if __name__ == "__main__":
         try:
             write_to_file(get_data_paths(config), _download_data(config))
         except Exception as e:
-            print(Fore.RED + f'Failed to download {config["project_name"]}: {e}' + Fore.RESET)
+            traceback.print_exc()
+            print(Fore.RED + f'Failed to download project {config["project_name"]}' + Fore.RESET)
             
 
